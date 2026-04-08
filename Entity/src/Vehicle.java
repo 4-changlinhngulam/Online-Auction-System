@@ -1,10 +1,11 @@
 class Vehicle extends Item {
-    public Vehicle(String id, String name, double startingPrice) {
-        super(id, name, startingPrice);
-    }
+    private long mileage;
+    public Vehicle() {}
+    public long getMileage() { return mileage; }
+    public void setMileage(long mileage) { this.mileage = mileage; }
 
     @Override
-    public void displayItemInfo() {
-        System.out.println("Vehicle: " + getName() + " | Price: $" + getStartingPrice());
+    public void printInfo() {
+        System.out.println("Vehicle Item: " + getName() + " - Mileage: " + mileage + " km");
     }
 }

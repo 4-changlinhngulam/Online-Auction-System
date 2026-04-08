@@ -3,6 +3,8 @@ import java.util.ArrayList;
 // Singleton AuctionManager
 public class AuctionManager {
     private static volatile AuctionManager instance;
+
+    // Lưu trữ danh sách toàn bộ các phiên đấu giá
     private List<Auction> activeAuctions;
 
     // Constructor private để ngăn khởi tạo từ bên ngoài
@@ -23,8 +25,12 @@ public class AuctionManager {
         }
         return auctionManager;
     }
-    // Khởi tạo đối tượng auction và thêm vào activeAuctions
-    public void createAuction(Auction auction) {
-        activeAuctions.add(auction);
+
+    public void registerAuction(Auction auction) {
+        this.activeAuctions.add(auction);
+    }
+
+    public void endAuction(String auctionId) {
+        // Tìm và đóng phiên đấu giá
     }
 }

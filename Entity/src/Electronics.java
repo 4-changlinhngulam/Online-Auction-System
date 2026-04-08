@@ -1,10 +1,11 @@
 class Electronics extends Item {
-    public Electronics(String id, String name, double startingPrice) {
-        super(id, name, startingPrice);
-    }
+    private int warrantyMonths;
+    public Electronics() {}
+    public int getWarrantyMonths() { return warrantyMonths; }
+    public void setWarrantyMonths(int warrantyMonths) { this.warrantyMonths = warrantyMonths; }
 
     @Override
-    public void displayItemInfo() {
-        System.out.println("Electronics: " + getName() + " | Price: $" + getStartingPrice());
+    public void printInfo() {
+        System.out.println("Electronics Item: " + getName() + " - Warranty: " + warrantyMonths + " months");
     }
 }

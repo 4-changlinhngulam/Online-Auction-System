@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 /**
  * 1. Admin là lớp có quyền hạn cao nhất trong hệ thống để quản lý tài khoản và luồng hoạt động, kế thừa từ User.
  * 2. Có quyền kiểm duyệt (moderateItem) để phê duyệt hoặc từ chối sản phẩm được đăng lên.
@@ -6,7 +8,9 @@
  */
 public class Admin extends User {
 
-    public Admin() {}
+    public Admin(String username) {
+        super(username);
+    }
 
     @Override
     public String getRole() {

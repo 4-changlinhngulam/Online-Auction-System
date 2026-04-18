@@ -1,9 +1,13 @@
+package com.auction.shared.model.entity;
+
 /**
  * Lớp Seller kế thừa User, đóng vai trò là người cung cấp sản phẩm để đấu giá.
  */
 public class Seller extends User {
 
-    public Seller() {}
+    public Seller(String username) {
+        super(username);
+    }
 
     @Override
     public String getRole() {

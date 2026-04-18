@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 import java.util.List;
 import java.util.ArrayList;
 // Singleton AuctionManager

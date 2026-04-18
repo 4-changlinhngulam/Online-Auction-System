@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 /**
  * Lớp Seller kế thừa User, đóng vai trò là người cung cấp sản phẩm để đấu giá.
  */

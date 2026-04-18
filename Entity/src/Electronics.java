@@ -1,6 +1,11 @@
 class Electronics extends Item {
     private int warrantyMonths;
     public Electronics() {}
+
+    public Electronics(String id, String name, double startingPrice) {
+        super(id, name, startingPrice);
+    }
+
     public int getWarrantyMonths() { return warrantyMonths; }
     public void setWarrantyMonths(int warrantyMonths) { this.warrantyMonths = warrantyMonths; }
 

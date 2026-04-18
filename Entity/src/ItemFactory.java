@@ -20,10 +20,10 @@ public class ItemFactory {
         }
 
         return switch (type) {
-            case ELECTRONICS -> new Electronics();
-            case ART         -> new Art();
-            case VEHICLE     -> new Vehicle();
-            default          -> throw new IllegalArgumentException("Không hỗ trợ loại sản phẩm này: " + type);
+            case ELECTRONICS -> new Electronics(id, name, startingPrice);
+            case ART         -> new Art(id, name, startingPrice);
+            case VEHICLE     -> new Vehicle(id, name, startingPrice);
+            default          -> throw new IllegalArgumentException("Không hỗ trợ: " + type);
         };
     }
 }

@@ -5,18 +5,20 @@
  * 4. Chứa logic xác thực đăng nhập chung `login()` có thể được sử dụng cho tất cả các loại người dùng.
  */
 public abstract class User extends Entity {
-    protected String name; // Sử dụng protected hoặc tạo getter/setter để lớp con có thể truy cập
+    protected String username; // Sử dụng protected hoặc tạo getter/setter để lớp con có thể truy cập
     protected String password;
     protected String role;
 
-    public User() {}
+    public User(String username) {
+        this.username = username;
+    }
 
     public String getUsername() {
-        return this.name;
+        return this.username;
     }
 
     public boolean login(String user, String pass) {
-        return this.name.equals(user) && this.password.equals(pass);
+        return this.username.equals(user) && this.password.equals(pass);
     }
 
     public abstract String getRole();

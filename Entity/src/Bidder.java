@@ -7,13 +7,28 @@ import java.util.List;
  * 3. Danh sách `watchlist` giúp Bidder theo dõi các sản phẩm mình quan tâm.
  * 4. Chứa logic Observer pattern thông qua hàm `update()` để nhận thông báo realtime khi có biến động giá.
  */
-public class Bidder extends User {
+public class Bidder extends User implements BidObserver {
     // Khởi tạo ArrayList để tránh NullPointerException khi thêm item vào watchlist
     private List<Item> watchlist = new ArrayList<>();
     private double maxAutoBidAmount;
     private boolean isAutoBidEnabled;
 
-    public Bidder() {}
+    public Bidder(String username) { super(username); }
+
+    // Update price (Observer pattern)
+    @Override
+    public void update(Item item, double newPrice, String lastBidderId) {
+        // 1. Cập nhật giao diện / in thông báo
+        System.out.println("[" + this.getUsername() + " nhận thông báo]: '"
+                + item.getName() + "' vừa lên mức giá " + newPrice);
+
+        // 2. Nếu đang bật Auto-bid và người vừa đặt giá KHÔNG PHẢI là mình
+        if (this.isAutoBidEnabled && !this.getId().equals(lastBidderId)) {
+            // Tự động nhảy vào vòng lặp đấu giá tự động
+            processAutoBid(item, newPrice);
+        }
+    }
+
 
     @Override
     public String getRole() {
@@ -40,12 +55,8 @@ public class Bidder extends User {
         this.isAutoBidEnabled = true;
     }
 
-    // Update price (Observer pattern)
-    public void update(Item item, double newPrice, String lastBidderId) {
-        // Cập nhật giá mới hiển thị cho user
-    }
 
     private void processAutoBid(Item item, double currentPrice) {
-        // Logic tự động đặt giá nếu có người trả cao hơn và chưa vượt quá maxAutoBidAmount
+        // Logic auto-bid ...
     }
 }

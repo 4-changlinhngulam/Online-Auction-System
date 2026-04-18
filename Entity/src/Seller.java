@@ -3,7 +3,9 @@
  */
 public class Seller extends User {
 
-    public Seller() {}
+    public Seller(String username) {
+        super(username);
+    }
 
     @Override
     public String getRole() {

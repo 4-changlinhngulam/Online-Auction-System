@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 class Vehicle extends Item {
     private long mileage;
     public Vehicle() {}

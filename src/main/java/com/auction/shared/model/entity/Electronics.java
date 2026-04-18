@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 class Electronics extends Item {
     private int warrantyMonths;
     public Electronics() {}

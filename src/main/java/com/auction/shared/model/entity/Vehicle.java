@@ -1,7 +1,6 @@
 package com.auction.shared.model.entity;
 class Vehicle extends Item {
     private long mileage;
-    public Vehicle() {}
 
     public Vehicle(String id, String name, double startingPrice) {
         super(id, name, startingPrice);

@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 /**
  * 1. Item là lớp quản lý thông tin sản phẩm mang ra đấu giá, kế thừa id và createdAt từ Entity.
  * 2. Lưu trữ trạng thái sản phẩm qua biến `status` (PENDING, APPROVED, REJECTED, SOLD) để Admin kiểm duyệt trước khi đưa lên sàn.*/

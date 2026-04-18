@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 class Art extends Item {
     public Art() {}
 

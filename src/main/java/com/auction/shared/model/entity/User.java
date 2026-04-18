@@ -1,3 +1,5 @@
+package com.auction.shared.model.entity;
+
 /**
  * 1. Lớp User kế thừa từ Entity và là lớp trừu tượng đại diện cho mọi đối tượng người dùng trong hệ thống.
  * 2. Thuộc tính bao gồm thông tin xác thực cơ bản: name, password, và role (vai trò: Bidder, Seller, Admin).

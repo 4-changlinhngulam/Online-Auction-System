@@ -7,9 +7,18 @@ public class AuctionManager {
     private static AuctionManager instance;
     private final Map<String, Auction> activeAuctions = new ConcurrentHashMap<>();
     private AuctionManager() {}
-    public static synchronized AuctionManager getInstance() {
-        if (instance == null) instance = new AuctionManager();
-        return instance;
+    // Phương thức public static để lấy thể hiện duy nhất (Double-checked locking)
+    public static AuctionManager getInstance() {
+        AuctionManager auctionManager = instance; // lấy dữ liệu instance vào biến cục bộ để tối ưu bộ nhớ
+        if (auctionManager == null) {
+            synchronized (AuctionManager.class) {
+                auctionManager = instance;
+                if (auctionManager == null) {
+                    instance = auctionManager = new AuctionManager();
+                }
+            }
+        }
+        return auctionManager;
     }
     // TODO: placeBid() – dùng synchronized / ReentrantLock
     // TODO: closeAuction() – xác định người thắng

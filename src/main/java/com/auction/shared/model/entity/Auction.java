@@ -1,5 +1,7 @@
 package com.auction.shared.model.entity;
 
+import com.auction.shared.model.enums.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -16,7 +18,7 @@ public class Auction extends Entity {
     private Bidder currentWinner;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private String status; // OPEN, RUNNING, FINISHED, PAID, CANCELED
+    private AuctionStatus status; // OPEN, RUNNING, FINISHED, PAID, CANCELED
 
     // Khởi tạo ArrayList để lưu lịch sử không bị lỗi null
     private List<BidTransaction> bidHistory = new ArrayList<>();
@@ -40,7 +42,7 @@ public class Auction extends Entity {
      */
     public synchronized boolean handleNewBid(Bidder bidder, double bidAmount) {
         //Kiểm tra trạng thái phiên (Chỉ cho phép bid khi đang RUNNING)
-        if (!"RUNNING".equals(this.status)) {
+        if (!AuctionStatus.RUNNING.equals(this.status)) {
             System.out.println("Phiên đấu giá không ở trạng thái mở!");
             return false;
         }
@@ -48,7 +50,7 @@ public class Auction extends Entity {
         //Kiểm tra thời gian (Đề phòng độ trễ mạng khiến bid tới sau khi đã đóng)
         if (LocalDateTime.now().isAfter(endTime)) {
             System.out.println("Phiên đấu giá đã kết thúc!");
-            this.status = "FINISHED";
+            this.status = AuctionStatus.FINISHED;
             return false;
         }
 

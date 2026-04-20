@@ -90,6 +90,6 @@ public class Auction extends Entity {
     public double getCurrentPrice() { return currentPrice; }
     public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public AuctionStatus getStatus() { return status; }
+    public void setStatus(AuctionStatus status) { this.status = status; }
 }

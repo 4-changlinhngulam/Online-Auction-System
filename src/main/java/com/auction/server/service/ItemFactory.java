@@ -1,5 +1,7 @@
 package com.auction.server.service;
 import com.auction.shared.model.entity.*;
+import com.auction.shared.model.enums.ItemType;
+
 import java.util.Map;
 public class ItemFactory {
 
@@ -7,9 +9,6 @@ public class ItemFactory {
      * 1. Enum ItemType giúp chuẩn hóa các loại sản phẩm hợp lệ trong hệ thống.
      * 2. Ngăn chặn triệt để lỗi do truyền sai chuỗi (ví dụ: "ELECTRONIC" thay vì "ELECTRONICS").
      */
-    public enum ItemType {
-        ELECTRONICS, ART, VEHICLE
-    }
 
     /**
      * 3. Factory Method nhận Enum làm đầu vào và khởi tạo đối tượng Item tương ứng.

@@ -9,8 +9,6 @@ public abstract class Item extends Entity {
     private double startingPrice;
     private String status; // PENDING, APPROVED, REJECTED, SOLD
 
-    public Item() {}
-
     // Constructor dùng chung cho Factory
     public Item(String id, String name, double startingPrice) {
         this.setId(id);

@@ -1,4 +1,6 @@
 package com.auction.shared.model.entity;
+import com.auction.shared.model.enums.UserRole;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +16,7 @@ public class Bidder extends User implements BidObserver {
     private double maxAutoBidAmount;
     private boolean isAutoBidEnabled;
 
-    public Bidder(String username) { super(username); }
+    public Bidder(String username, String password) { super(username, password, UserRole.BIDDER); }
 
     // Update price (Observer pattern)
     @Override
@@ -59,5 +61,13 @@ public class Bidder extends User implements BidObserver {
 
     private void processAutoBid(Item item, double currentPrice) {
         // Logic auto-bid ...
+    }
+
+    public double getMaxAutoBidAmount() {
+        return maxAutoBidAmount;
+    }
+
+    public void setMaxAutoBidAmount(double maxAutoBidAmount) {
+        this.maxAutoBidAmount = maxAutoBidAmount;
     }
 }

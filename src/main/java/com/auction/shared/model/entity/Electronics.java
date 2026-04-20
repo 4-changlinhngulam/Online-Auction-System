@@ -2,8 +2,6 @@ package com.auction.shared.model.entity;
 
 public class Electronics extends Item {
     private int warrantyMonths;
-    public Electronics() {}
-
     public Electronics(String id, String name, double startingPrice) {
         super(id, name, startingPrice);
     }

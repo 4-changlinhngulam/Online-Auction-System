@@ -1,4 +1,5 @@
 package com.auction.shared.model.entity;
+import com.auction.shared.model.enums.*;
 
 /**
  * 1. Lớp User kế thừa từ Entity và là lớp trừu tượng đại diện cho mọi đối tượng người dùng trong hệ thống.
@@ -9,9 +10,9 @@ package com.auction.shared.model.entity;
 public abstract class User extends Entity {
     protected String name; // Sử dụng protected hoặc tạo getter/setter để lớp con có thể truy cập
     protected String password;
-    protected String role;
+    protected UserRole role;
 
-    public User(String name, String password, String role) {
+    public User(String name, String password, UserRole role) {
         this.name = name;
         this.password = password;
         this.role = role;

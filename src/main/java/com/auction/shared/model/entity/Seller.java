@@ -1,7 +1,7 @@
 package com.auction.shared.model.entity;
 
 import com.auction.server.service.*;
-
+import com.auction.shared.model.enums.*;
 ;
 /**
  * Lớp Seller kế thừa User, đóng vai trò là người cung cấp sản phẩm để đấu giá.
@@ -9,7 +9,7 @@ import com.auction.server.service.*;
 public class Seller extends User {
 
     public Seller(String username, String password) {
-        super(username, password, "SELLER");
+        super(username, password, UserRole.SELLER);
     }
 
     @Override
@@ -22,7 +22,7 @@ public class Seller extends User {
         // Logic hiển thị menu của người bán
     }
 
-    public Item postNewProduct(ItemFactory.ItemType itemType, String id, String name, double startingPrice) {
+    public Item postNewProduct(ItemType itemType, String id, String name, double startingPrice) {
         Item newItem = ItemFactory.createItem(itemType, id, name, startingPrice); // Xử lý kiểu của Item sẽ đẩy vào main
         newItem.setStatus("PENDING");
         return newItem;

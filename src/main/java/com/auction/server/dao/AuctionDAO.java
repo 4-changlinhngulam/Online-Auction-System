@@ -1,10 +1,17 @@
 package com.auction.server.dao;
 
 import com.auction.shared.model.entity.Auction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 
+/**
+ * DAO cho Auction - Quản lý lưu trữ và truy xuất dữ liệu phiên đấu giá
+ * Sử dụng Serialization để đọc/ghi dữ liệu từ file
+ */
 public class AuctionDAO {
+    private static final Logger logger = LoggerFactory.getLogger(AuctionDAO.class);
     private static final String DATA_FILE = "data/auctions.dat";
     // TODO: save / findById / findAll / update / delete
 
@@ -15,7 +22,7 @@ public class AuctionDAO {
      */
     public boolean save(Auction auction) {
         if (auction == null || auction.getId() == null) {
-            System.out.println("Lỗi: Auction hoặc ID không hợp lệ!");
+            logger.error("Lỗi: Auction hoặc ID không hợp lệ!");
             return false;
         }
 
@@ -34,17 +41,18 @@ public class AuctionDAO {
                         break;
                     }
                 }
+                logger.info("Cập nhật phiên đấu giá ID: {}", auction.getId());
             } else {
                 auctions.add(auction);
+                logger.info("Thêm mới phiên đấu giá ID: {}", auction.getId());
             }
 
             writeToFile(auctions);
-            System.out.println("✓ Lưu phiên đấu giá thành công!");
+            logger.info("✓ Lưu phiên đấu giá thành công!");
             return true;
 
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi lưu phiên đấu giá: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("✗ Lỗi khi lưu phiên đấu giá", e);
             return false;
         }
     }
@@ -56,20 +64,26 @@ public class AuctionDAO {
      */
     public Auction findById(String id) {
         if (id == null || id.trim().isEmpty()) {
-            System.out.println("Lỗi: ID không hợp lệ!");
+            logger.warn("Tìm kiếm với ID không hợp lệ");
             return null;
         }
 
         try {
             List<Auction> auctions = findAll();
-            return auctions.stream()
+            Auction result = auctions.stream()
                     .filter(a -> a.getId().equals(id))
                     .findFirst()
                     .orElse(null);
 
+            if (result != null) {
+                logger.debug("Tìm thấy phiên đấu giá ID: {}", id);
+            } else {
+                logger.warn("Không tìm thấy phiên đấu giá ID: {}", id);
+            }
+            return result;
+
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi tìm phiên đấu giá: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("✗ Lỗi khi tìm phiên đấu giá ID: {}", id, e);
             return null;
         }
     }
@@ -83,15 +97,16 @@ public class AuctionDAO {
             File file = new File(DATA_FILE);
 
             if (!file.exists()) {
-                System.out.println("File dữ liệu chưa tồn tại, khởi tạo danh sách rỗng.");
+                logger.debug("File dữ liệu chưa tồn tại, khởi tạo danh sách rỗng");
                 return new ArrayList<>();
             }
 
-            return readFromFile();
+            List<Auction> auctions = readFromFile();
+            logger.debug("Lấy {} phiên đấu giá từ file", auctions.size());
+            return auctions;
 
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi lấy danh sách phiên đấu giá: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("✗ Lỗi khi lấy danh sách phiên đấu giá", e);
             return new ArrayList<>();
         }
     }
@@ -103,7 +118,7 @@ public class AuctionDAO {
      */
     public boolean update(Auction auction) {
         if (auction == null || auction.getId() == null) {
-            System.out.println("Lỗi: Auction hoặc ID không hợp lệ!");
+            logger.error("Lỗi: Auction hoặc ID không hợp lệ!");
             return false;
         }
 
@@ -115,22 +130,22 @@ public class AuctionDAO {
                 if (auctions.get(i).getId().equals(auction.getId())) {
                     auctions.set(i, auction);
                     found = true;
+                    logger.info("Cập nhật phiên đấu giá ID: {}", auction.getId());
                     break;
                 }
             }
 
             if (!found) {
-                System.out.println("✗ Không tìm thấy phiên đấu giá với ID: " + auction.getId());
+                logger.warn("✗ Không tìm thấy phiên đấu giá với ID: {}", auction.getId());
                 return false;
             }
 
             writeToFile(auctions);
-            System.out.println("✓ Cập nhật phiên đấu giá thành công!");
+            logger.info("✓ Cập nhật phiên đấu giá thành công!");
             return true;
 
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi cập nhật phiên đấu giá: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("✗ Lỗi khi cập nhật phiên đấu giá", e);
             return false;
         }
     }
@@ -142,7 +157,7 @@ public class AuctionDAO {
      */
     public boolean delete(String id) {
         if (id == null || id.trim().isEmpty()) {
-            System.out.println("Lỗi: ID không hợp lệ!");
+            logger.error("Lỗi: ID không hợp lệ!");
             return false;
         }
 
@@ -151,17 +166,16 @@ public class AuctionDAO {
             boolean removed = auctions.removeIf(a -> a.getId().equals(id));
 
             if (!removed) {
-                System.out.println("✗ Không tìm thấy phiên đấu giá với ID: " + id);
+                logger.warn("✗ Không tìm thấy phiên đấu giá với ID: {}", id);
                 return false;
             }
 
             writeToFile(auctions);
-            System.out.println("✓ Xóa phiên đấu giá thành công!");
+            logger.info("✓ Xóa phiên đấu giá ID: {} thành công!", id);
             return true;
 
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi xóa phiên đấu giá: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("✗ Lỗi khi xóa phiên đấu giá ID: {}", id, e);
             return false;
         }
     }
@@ -172,9 +186,11 @@ public class AuctionDAO {
      */
     public int getCount() {
         try {
-            return findAll().size();
+            int count = findAll().size();
+            logger.debug("Tổng số phiên đấu giá: {}", count);
+            return count;
         } catch (Exception e) {
-            System.out.println("✗ Lỗi khi đếm phiên đấu giá: " + e.getMessage());
+            logger.error("✗ Lỗi khi đếm phiên đấu giá", e);
             return 0;
         }
     }
@@ -189,16 +205,18 @@ public class AuctionDAO {
      * @throws IOException nếu có lỗi I/O
      */
     private void writeToFile(List<Auction> auctions) throws IOException {
-        // Tạo thư mục nếu chưa tồn tại
         File dir = new File("data");
         if (!dir.exists()) {
-            dir.mkdirs();
+            if (dir.mkdirs()) {
+                logger.debug("Tạo thư mục data thành công");
+            }
         }
 
         try (ObjectOutputStream oos = new ObjectOutputStream(
                 new FileOutputStream(DATA_FILE))) {
             oos.writeObject(auctions);
             oos.flush();
+            logger.debug("Ghi {} phiên đấu giá vào file thành công", auctions.size());
         }
     }
 
@@ -221,7 +239,9 @@ public class AuctionDAO {
      * @return true nếu file tồn tại, false nếu không
      */
     public boolean dataFileExists() {
-        return new File(DATA_FILE).exists();
+        boolean exists = new File(DATA_FILE).exists();
+        logger.debug("File dữ liệu tồn tại: {}", exists);
+        return exists;
     }
 
     /**
@@ -233,12 +253,12 @@ public class AuctionDAO {
             File file = new File(DATA_FILE);
             if (file.exists()) {
                 writeToFile(new ArrayList<>());
-                System.out.println("✓ Xóa toàn bộ dữ liệu thành công!");
+                logger.info("✓ Xóa toàn bộ dữ liệu thành công!");
                 return true;
             }
             return false;
         } catch (IOException e) {
-            System.out.println("✗ Lỗi khi xóa dữ liệu: " + e.getMessage());
+            logger.error("✗ Lỗi khi xóa dữ liệu", e);
             return false;
         }
     }

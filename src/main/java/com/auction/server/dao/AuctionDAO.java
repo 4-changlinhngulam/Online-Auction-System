@@ -13,7 +13,6 @@ import java.util.*;
 public class AuctionDAO {
     private static final Logger logger = LoggerFactory.getLogger(AuctionDAO.class);
     private static final String DATA_FILE = "data/auctions.dat";
-    // TODO: save / findById / findAll / update / delete
 
     /**
      * Lưu một phiên đấu giá vào file (hoặc cập nhật nếu đã tồn tại)
@@ -27,10 +26,8 @@ public class AuctionDAO {
         }
 
         try {
-            // Lấy danh sách hiện tại
             List<Auction> auctions = findAll();
 
-            // Nếu đã tồn tại thì cập nhật, nếu không thì thêm mới
             boolean exists = auctions.stream()
                     .anyMatch(a -> a.getId().equals(auction.getId()));
 
@@ -201,8 +198,6 @@ public class AuctionDAO {
 
     /**
      * Ghi danh sách Auction vào file bằng Serialization
-     * @param auctions - Danh sách cần ghi
-     * @throws IOException nếu có lỗi I/O
      */
     private void writeToFile(List<Auction> auctions) throws IOException {
         File dir = new File("data");
@@ -222,9 +217,6 @@ public class AuctionDAO {
 
     /**
      * Đọc danh sách Auction từ file bằng Serialization
-     * @return Danh sách Auction đã đọc
-     * @throws IOException nếu có lỗi I/O
-     * @throws ClassNotFoundException nếu không tìm thấy class
      */
     @SuppressWarnings("unchecked")
     private List<Auction> readFromFile() throws IOException, ClassNotFoundException {
@@ -236,7 +228,6 @@ public class AuctionDAO {
 
     /**
      * Kiểm tra xem file dữ liệu có tồn tại hay không
-     * @return true nếu file tồn tại, false nếu không
      */
     public boolean dataFileExists() {
         boolean exists = new File(DATA_FILE).exists();
@@ -246,7 +237,6 @@ public class AuctionDAO {
 
     /**
      * Xóa toàn bộ dữ liệu (reset file)
-     * @return true nếu xóa thành công
      */
     public boolean clearAll() {
         try {

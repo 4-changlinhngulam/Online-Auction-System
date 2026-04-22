@@ -1,5 +1,7 @@
 package com.auction.server.dao;
 
+import com.auction.shared.exception.DataPersistenceException;
+import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Auction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +11,11 @@ import java.util.*;
 /**
  * DAO cho Auction - Quản lý lưu trữ và truy xuất dữ liệu phiên đấu giá
  * Sử dụng Serialization để đọc/ghi dữ liệu từ file
+ *
+ * Exception-based error handling:
+ * - DataPersistenceException: Thrown for I/O and serialization errors
+ * - EntityNotFoundException: Thrown when auction is not found
+ * - IllegalArgumentException: Thrown for invalid input
  */
 public class AuctionDAO {
     private static final Logger logger = LoggerFactory.getLogger(AuctionDAO.class);
@@ -17,12 +24,11 @@ public class AuctionDAO {
     /**
      * Lưu một phiên đấu giá vào file (hoặc cập nhật nếu đã tồn tại)
      * @param auction - Phiên đấu giá cần lưu
-     * @return true nếu lưu thành công, false nếu thất bại
+     * @throws DataPersistenceException nếu có lỗi khi ghi file
      */
-    public boolean save(Auction auction) {
+    public void save(Auction auction) throws DataPersistenceException {
         if (auction == null || auction.getId() == null) {
-            logger.error("Lỗi: Auction hoặc ID không hợp lệ!");
-            return false;
+            throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
         try {
@@ -46,23 +52,24 @@ public class AuctionDAO {
 
             writeToFile(auctions);
             logger.info("✓ Lưu phiên đấu giá thành công!");
-            return true;
 
+        } catch (DataPersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi lưu phiên đấu giá", e);
-            return false;
+            throw new DataPersistenceException("Lỗi khi lưu phiên đấu giá", e);
         }
     }
 
     /**
      * Tìm phiên đấu giá theo ID
      * @param id - ID của phiên đấu giá
-     * @return Auction nếu tìm thấy, null nếu không
+     * @return Auction nếu tìm thấy
+     * @throws EntityNotFoundException nếu không tìm thấy
+     * @throws DataPersistenceException nếu có lỗi khi đọc file
      */
-    public Auction findById(String id) {
+    public Auction findById(String id) throws EntityNotFoundException, DataPersistenceException {
         if (id == null || id.trim().isEmpty()) {
-            logger.warn("Tìm kiếm với ID không hợp lệ");
-            return null;
+            throw new IllegalArgumentException("ID không được phép null hoặc rỗng");
         }
 
         try {
@@ -74,22 +81,26 @@ public class AuctionDAO {
 
             if (result != null) {
                 logger.debug("Tìm thấy phiên đấu giá ID: {}", id);
+                return result;
             } else {
-                logger.warn("Không tìm thấy phiên đấu giá ID: {}", id);
+                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + id);
             }
-            return result;
 
+        } catch (EntityNotFoundException e) {
+            throw e;
+        } catch (DataPersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi tìm phiên đấu giá ID: {}", id, e);
-            return null;
+            throw new DataPersistenceException("Lỗi khi tìm phiên đấu giá ID: " + id, e);
         }
     }
 
     /**
      * Lấy tất cả phiên đấu giá
      * @return List danh sách tất cả Auction, rỗng nếu không có
+     * @throws DataPersistenceException nếu có lỗi khi đọc file
      */
-    public List<Auction> findAll() {
+    public List<Auction> findAll() throws DataPersistenceException {
         try {
             File file = new File(DATA_FILE);
 
@@ -103,20 +114,19 @@ public class AuctionDAO {
             return auctions;
 
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi lấy danh sách phiên đấu giá", e);
-            return new ArrayList<>();
+            throw new DataPersistenceException("Lỗi khi lấy danh sách phiên đấu giá", e);
         }
     }
 
     /**
      * Cập nhật một phiên đấu giá hiện có
      * @param auction - Phiên đấu giá cần cập nhật
-     * @return true nếu cập nhật thành công, false nếu không
+     * @throws EntityNotFoundException nếu phiên đấu giá không tồn tại
+     * @throws DataPersistenceException nếu có lỗi khi ghi file
      */
-    public boolean update(Auction auction) {
+    public void update(Auction auction) throws EntityNotFoundException, DataPersistenceException {
         if (auction == null || auction.getId() == null) {
-            logger.error("Lỗi: Auction hoặc ID không hợp lệ!");
-            return false;
+            throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
         try {
@@ -133,29 +143,30 @@ public class AuctionDAO {
             }
 
             if (!found) {
-                logger.warn("✗ Không tìm thấy phiên đấu giá với ID: {}", auction.getId());
-                return false;
+                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + auction.getId());
             }
 
             writeToFile(auctions);
             logger.info("✓ Cập nhật phiên đấu giá thành công!");
-            return true;
 
+        } catch (EntityNotFoundException e) {
+            throw e;
+        } catch (DataPersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi cập nhật phiên đấu giá", e);
-            return false;
+            throw new DataPersistenceException("Lỗi khi cập nhật phiên đấu giá", e);
         }
     }
 
     /**
      * Xóa một phiên đấu giá theo ID
      * @param id - ID của phiên đấu giá cần xóa
-     * @return true nếu xóa thành công, false nếu không
+     * @throws EntityNotFoundException nếu phiên đấu giá không tồn tại
+     * @throws DataPersistenceException nếu có lỗi khi ghi file
      */
-    public boolean delete(String id) {
+    public void delete(String id) throws EntityNotFoundException, DataPersistenceException {
         if (id == null || id.trim().isEmpty()) {
-            logger.error("Lỗi: ID không hợp lệ!");
-            return false;
+            throw new IllegalArgumentException("ID không được phép null hoặc rỗng");
         }
 
         try {
@@ -163,32 +174,35 @@ public class AuctionDAO {
             boolean removed = auctions.removeIf(a -> a.getId().equals(id));
 
             if (!removed) {
-                logger.warn("✗ Không tìm thấy phiên đấu giá với ID: {}", id);
-                return false;
+                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + id);
             }
 
             writeToFile(auctions);
             logger.info("✓ Xóa phiên đấu giá ID: {} thành công!", id);
-            return true;
 
+        } catch (EntityNotFoundException e) {
+            throw e;
+        } catch (DataPersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi xóa phiên đấu giá ID: {}", id, e);
-            return false;
+            throw new DataPersistenceException("Lỗi khi xóa phiên đấu giá ID: " + id, e);
         }
     }
 
     /**
      * Lấy số lượng phiên đấu giá
      * @return Số lượng phiên đấu giá
+     * @throws DataPersistenceException nếu có lỗi khi đọc file
      */
-    public int getCount() {
+    public int getCount() throws DataPersistenceException {
         try {
             int count = findAll().size();
             logger.debug("Tổng số phiên đấu giá: {}", count);
             return count;
+        } catch (DataPersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("✗ Lỗi khi đếm phiên đấu giá", e);
-            return 0;
+            throw new DataPersistenceException("Lỗi khi đếm phiên đấu giá", e);
         }
     }
 
@@ -198,36 +212,45 @@ public class AuctionDAO {
 
     /**
      * Ghi danh sách Auction vào file bằng Serialization
+     * @throws DataPersistenceException nếu có lỗi I/O
      */
-    private void writeToFile(List<Auction> auctions) throws IOException {
-        File dir = new File("data");
-        if (!dir.exists()) {
-            if (dir.mkdirs()) {
-                logger.debug("Tạo thư mục data thành công");
+    private void writeToFile(List<Auction> auctions) throws DataPersistenceException {
+        try {
+            File dir = new File("data");
+            if (!dir.exists()) {
+                if (dir.mkdirs()) {
+                    logger.debug("Tạo thư mục data thành công");
+                }
             }
-        }
 
-        try (ObjectOutputStream oos = new ObjectOutputStream(
-                new FileOutputStream(DATA_FILE))) {
-            oos.writeObject(auctions);
-            oos.flush();
-            logger.debug("Ghi {} phiên đấu giá vào file thành công", auctions.size());
+            try (ObjectOutputStream oos = new ObjectOutputStream(
+                    new FileOutputStream(DATA_FILE))) {
+                oos.writeObject(auctions);
+                oos.flush();
+                logger.debug("Ghi {} phiên đấu giá vào file thành công", auctions.size());
+            }
+        } catch (IOException e) {
+            throw new DataPersistenceException("Lỗi khi ghi dữ liệu vào file", e);
         }
     }
 
     /**
      * Đọc danh sách Auction từ file bằng Serialization
+     * @throws DataPersistenceException nếu có lỗi I/O hoặc deserialization
      */
     @SuppressWarnings("unchecked")
-    private List<Auction> readFromFile() throws IOException, ClassNotFoundException {
+    private List<Auction> readFromFile() throws DataPersistenceException {
         try (ObjectInputStream ois = new ObjectInputStream(
                 new FileInputStream(DATA_FILE))) {
             return (List<Auction>) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new DataPersistenceException("Lỗi khi đọc dữ liệu từ file", e);
         }
     }
 
     /**
      * Kiểm tra xem file dữ liệu có tồn tại hay không
+     * @return true nếu file tồn tại, false nếu không
      */
     public boolean dataFileExists() {
         boolean exists = new File(DATA_FILE).exists();
@@ -237,19 +260,19 @@ public class AuctionDAO {
 
     /**
      * Xóa toàn bộ dữ liệu (reset file)
+     * @throws DataPersistenceException nếu có lỗi khi ghi file
      */
-    public boolean clearAll() {
+    public void clearAll() throws DataPersistenceException {
         try {
             File file = new File(DATA_FILE);
             if (file.exists()) {
                 writeToFile(new ArrayList<>());
                 logger.info("✓ Xóa toàn bộ dữ liệu thành công!");
-                return true;
             }
-            return false;
-        } catch (IOException e) {
-            logger.error("✗ Lỗi khi xóa dữ liệu", e);
-            return false;
+        } catch (DataPersistenceException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DataPersistenceException("Lỗi khi xóa dữ liệu", e);
         }
     }
 }

@@ -59,8 +59,6 @@ public class Auction extends Entity {
             return false;
         }
 
-
-
         //Cập nhật thông tin người thắng và giá mới
         this.currentPrice = bidAmount;
         this.currentWinner = bidder;

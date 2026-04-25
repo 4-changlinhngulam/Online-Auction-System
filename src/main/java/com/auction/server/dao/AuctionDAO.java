@@ -22,11 +22,6 @@ public class AuctionDAO {
     private static final String DATA_FILE = "data/auctions.dat";
 
     /**
-     * Lưu một phiên đấu giá vào file (hoặc cập nhật nếu đã tồn tại)
-     * @param auction - Phiên đấu giá cần lưu
-     * @throws DataPersistenceException nếu có lỗi khi ghi file
-     */
-    /**
      * Lưu một phiên đấu giá MỚI vào file.
      * @param auction - Phiên đấu giá cần lưu
      * @throws DataPersistenceException nếu có lỗi khi ghi file

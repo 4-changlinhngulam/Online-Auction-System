@@ -26,6 +26,12 @@ public class AuctionDAO {
      * @param auction - Phiên đấu giá cần lưu
      * @throws DataPersistenceException nếu có lỗi khi ghi file
      */
+    /**
+     * Lưu một phiên đấu giá MỚI vào file.
+     * @param auction - Phiên đấu giá cần lưu
+     * @throws DataPersistenceException nếu có lỗi khi ghi file
+     * @throws IllegalArgumentException nếu ID đã tồn tại (Chống duplicate)
+     */
     public void save(Auction auction) throws DataPersistenceException {
         if (auction == null || auction.getId() == null) {
             throw new IllegalArgumentException("Auction và ID không được phép null");
@@ -38,23 +44,21 @@ public class AuctionDAO {
                     .anyMatch(a -> a.getId().equals(auction.getId()));
 
             if (exists) {
-                for (int i = 0; i < auctions.size(); i++) {
-                    if (auctions.get(i).getId().equals(auction.getId())) {
-                        auctions.set(i, auction);
-                        break;
-                    }
-                }
-                logger.info("Cập nhật phiên đấu giá ID: {}", auction.getId());
-            } else {
-                auctions.add(auction);
-                logger.info("Thêm mới phiên đấu giá ID: {}", auction.getId());
+                // NÉM LỖI DUPLICATE NGAY LẬP TỨC
+                logger.error("Từ chối thêm mới: Phiên đấu giá ID {} đã tồn tại!", auction.getId());
+                throw new IllegalArgumentException("Phiên đấu giá với ID " + auction.getId() + " đã tồn tại. Vui lòng dùng hàm update() để cập nhật.");
             }
 
+            // Nếu chưa tồn tại thì mới cho add vào list
+            auctions.add(auction);
+            logger.info("Thêm mới phiên đấu giá ID: {}", auction.getId());
+
+            // Ghi đè file
             writeToFile(auctions);
             logger.info("✓ Lưu phiên đấu giá thành công!");
 
-        } catch (DataPersistenceException e) {
-            throw e;
+        } catch (IllegalArgumentException | DataPersistenceException e) {
+            throw e; // Ném thẳng ra ngoài để tầng Service xử lý
         } catch (Exception e) {
             throw new DataPersistenceException("Lỗi khi lưu phiên đấu giá", e);
         }

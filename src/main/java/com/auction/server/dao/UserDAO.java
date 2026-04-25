@@ -1,5 +1,5 @@
 package com.auction.server.dao;
-import com.auction.shared.model.entity.User;
+import com.auction.shared.model.entity.*;
 import java.util.*;
 /** DAO cho User – đọc/ghi bằng Serialization. */
 public class UserDAO {

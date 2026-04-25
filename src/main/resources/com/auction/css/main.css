@@ -68,32 +68,3 @@
 }
 
 
-
-/* 1. Nền toàn màn hình */
-.root {
-    -fx-background-image: url("../image/bg-login.jpg");
-    -fx-background-size: cover;
-    -fx-background-position: center;
-    -fx-background-repeat: no-repeat;
-    -fx-background-radius: 0;
-    -fx-border-radius: 0;
-    -fx-padding: 0;
-}
-
-/* 2. Tạo hiệu ứng tấm kính cho vùng nhập liệu */
-.glass-panel {
-    -fx-background-color: rgba(255, 255, 255, 0.15); /* Màu trắng trong suốt */
-    -fx-background-radius: 20;
-    -fx-background-radius: 20;
-    -fx-border-color: rgba(255, 255, 255, 0.3); /* Viền trắng mờ */
-    -fx-border-width: 1.5;
-    -fx-border-radius: 20;
-    /* Đổ bóng nhẹ phía sau tấm kính */
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 15, 0, 0, 0);
-}
-
-/* 3. Style cho Label để nổi bật trên nền tối */
-.label {
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-}

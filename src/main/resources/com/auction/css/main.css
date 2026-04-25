@@ -1,4 +1,99 @@
 /* main.css – Stylesheet chính */
 .root { -fx-font-family: "Segoe UI", sans-serif; -fx-background-color: #f5f5f5; }
 .button-primary { -fx-background-color: #1a73e8; -fx-text-fill: white; }
-/* TODO: Thêm styles theo thiết kế */
+/* TODO: Thêm styles theo thiết kế  :*/
+
+.button-outline {
+    -fx-background-color: #8fbc8f;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-font-family: "Segoe UI";
+    -fx-border-color: #d4a853;
+    -fx-border-width: 2;
+    -fx-border-radius: 50;
+    -fx-background-radius: 50;
+    -fx-padding: 12 40 12 40;
+    -fx-cursor: hand;
+    -fx-pref-width: 300;
+}
+
+.button-outline:hover {
+    -fx-background-color: #7aad7a;
+    -fx-border-color: #c49040;
+}
+
+.button-outline:pressed {
+    -fx-background-color: #6a9d6a;
+}
+
+.label-description {
+    -fx-font-size: 14px;
+    -fx-text-fill: black;
+    -fx-text-alignment: center;   /* căn chữ trong dòng */
+    -fx-wrap-text: true;
+    -fx-line-spacing: 5;          /* khoảng cách giữa các dòng */
+}
+
+
+.title-main {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Black";
+    -fx-text-fill: #64b5f6;
+    -fx-effect: dropshadow(three-pass-box, #1565c0, 4, 0.6, 3, 3);
+}
+.button-signin {
+    -fx-background-color: #8fbc8f;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-font-family: "Segoe UI";
+    -fx-border-color: #d4a853;
+    -fx-border-width: 2;
+    -fx-border-radius: 50;
+    -fx-background-radius: 50;
+    -fx-padding: 12 40 12 40;
+    -fx-cursor: hand;
+    -fx-pref-width: 300;
+}
+
+.button-signin:hover {
+    -fx-background-color: #7aad7a;
+    -fx-border-color: #c49040;
+}
+
+.button-signin:pressed {
+    -fx-background-color: #6a9d6a;
+}
+
+
+
+/* 1. Nền toàn màn hình */
+.root {
+    -fx-background-image: url("../image/bg-login.jpg");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 0;
+}
+
+/* 2. Tạo hiệu ứng tấm kính cho vùng nhập liệu */
+.glass-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.15); /* Màu trắng trong suốt */
+    -fx-background-radius: 20;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(255, 255, 255, 0.3); /* Viền trắng mờ */
+    -fx-border-width: 1.5;
+    -fx-border-radius: 20;
+    /* Đổ bóng nhẹ phía sau tấm kính */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 15, 0, 0, 0);
+}
+
+/* 3. Style cho Label để nổi bật trên nền tối */
+.label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}

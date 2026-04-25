@@ -1,15 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.control.*?>
 
-<!--
-  Màn hình: login
-  TODO: Thiết kế giao diện bằng SceneBuilder và liên kết với Controller tương ứng.
--->
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.auction.client.controller.TODO_CONTROLLER"
-      spacing="10" style="-fx-padding: 20;">
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
 
-    <Label text="TODO: Thiết kế màn hình login" />
+<BorderPane prefHeight="600.0" prefWidth="900.0" styleClass="root" stylesheets="@../../css/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.LoginController">
 
-</VBox>
+   <center>
+      <AnchorPane prefWidth="763.0" BorderPane.alignment="CENTER">
+         <children>
+
+            <!-- Tấm kính glass chứa toàn bộ form -->
+            <VBox alignment="CENTER" prefWidth="420" spacing="14" styleClass="glass-panel" AnchorPane.bottomAnchor="60" AnchorPane.leftAnchor="240" AnchorPane.rightAnchor="240" AnchorPane.topAnchor="60">
+
+               <padding>
+                  <Insets bottom="40" left="40" right="40" top="40" />
+               </padding>
+
+               <!-- Tiêu đề -->
+               <Label alignment="CENTER" maxWidth="Infinity" styleClass="title-main" text="HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN" wrapText="true" />
+
+               <!-- Spacer nhỏ -->
+               <Region prefHeight="10" />
+
+               <!-- EMAIL -->
+               <Label maxWidth="Infinity" styleClass="label" text="EMAIL" />
+               <TextField fx:id="emailField" maxWidth="Infinity" promptText="Nhập email của bạn" styleClass="input-field" />
+
+               <!-- PASSWORD -->
+               <Label maxWidth="Infinity" styleClass="label" text="PASSWORD" />
+               <PasswordField fx:id="passwordField" maxWidth="Infinity" promptText="Nhập mật khẩu" styleClass="input-field" />
+               <!-- Spacer -->
+               <Region prefHeight="8" />
+
+               <!-- Button SIGN IN -->
+               <Button fx:id="signinButton" maxWidth="Infinity" styleClass="button-signin" text="SIGN IN" />
+
+               <!-- Button SIGN UP -->
+               <Button fx:id="signupButton" maxWidth="Infinity" styleClass="button-outline" text="SIGN UP" />
+
+               <!-- Label lỗi -->
+               <Label fx:id="errorLabel" alignment="CENTER" maxWidth="Infinity" style="-fx-text-fill: #ff6b6b; -fx-font-size: 13px;" text="" wrapText="true" />
+
+            </VBox>
+
+         </children>
+      </AnchorPane>
+   </center>
+
+</BorderPane>

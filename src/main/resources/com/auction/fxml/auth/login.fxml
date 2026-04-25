@@ -9,6 +9,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
 <BorderPane prefHeight="600.0" prefWidth="900.0" styleClass="root" stylesheets="@../../css/main.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.LoginController">
 
@@ -17,14 +18,17 @@
          <children>
 
             <!-- Tấm kính glass chứa toàn bộ form -->
-            <VBox alignment="CENTER" prefWidth="420" spacing="14" styleClass="glass-panel" AnchorPane.bottomAnchor="60" AnchorPane.leftAnchor="240" AnchorPane.rightAnchor="240" AnchorPane.topAnchor="60">
+            <VBox alignment="CENTER" layoutX="240.0" layoutY="60.0" prefWidth="420" spacing="14" styleClass="glass-panel" AnchorPane.bottomAnchor="60.0" AnchorPane.leftAnchor="240.0" AnchorPane.rightAnchor="240.0" AnchorPane.topAnchor="60.0">
 
                <padding>
                   <Insets bottom="40" left="40" right="40" top="40" />
                </padding>
 
                <!-- Tiêu đề -->
-               <Label alignment="CENTER" maxWidth="Infinity" styleClass="title-main" text="HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN" wrapText="true" />
+               <Label alignment="CENTER" maxWidth="Infinity" styleClass="title-main" stylesheets="@../../css/main.css" text="HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN" wrapText="true">
+                  <font>
+                     <Font size="24.0" />
+                  </font></Label>
 
                <!-- Spacer nhỏ -->
                <Region prefHeight="10" />
@@ -40,11 +44,10 @@
                <Region prefHeight="8" />
 
                <!-- Button SIGN IN -->
-               <Button fx:id="signinButton" maxWidth="Infinity" styleClass="button-signin" text="SIGN IN" />
+               <Button fx:id="signinButton" maxWidth="Infinity" onAction="#handleSignIn" styleClass="button-signin" text="SIGN IN" />
 
                <!-- Button SIGN UP -->
-               <Button fx:id="signupButton" maxWidth="Infinity" styleClass="button-outline" text="SIGN UP" />
-
+               <Button fx:id="signupButton" maxWidth="Infinity" onAction="#handleRegisterLink" styleClass="button-outline" text="SIGN UP" />
                <!-- Label lỗi -->
                <Label fx:id="errorLabel" alignment="CENTER" maxWidth="Infinity" style="-fx-text-fill: #ff6b6b; -fx-font-size: 13px;" text="" wrapText="true" />
 

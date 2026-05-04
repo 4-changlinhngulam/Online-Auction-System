@@ -17,3 +17,6 @@ Thumbs.db
 
 # JavaFX / runtime
 *.log
+
+# Database credentials
+src/main/resources/application.properties

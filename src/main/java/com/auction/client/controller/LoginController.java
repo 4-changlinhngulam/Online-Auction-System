@@ -48,8 +48,8 @@ public class LoginController {
     }
     @FXML
     private void handleRegisterLink() {
-//        SceneManager.switchTo(
-//                "/com/auction/fxml/auth/register.fxml"
-//        );
+        SceneManager.switchTo(
+                "/com/auction/fxml/auth/register.fxml"
+      );
     }
 }

@@ -6,6 +6,10 @@ public class Vehicle extends Item {
         super(id, name, startingPrice);
     }
 
+    public Vehicle() {
+        super();
+    }
+
     public long getMileage() { return mileage; }
     public void setMileage(long mileage) { this.mileage = mileage; }
 

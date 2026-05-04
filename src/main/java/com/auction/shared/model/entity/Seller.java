@@ -8,8 +8,12 @@ import com.auction.shared.model.enums.*;
  */
 public class Seller extends User {
 
-    public Seller(String username, String password) {
-        super(username, password, UserRole.SELLER);
+    public Seller(String username, String password, String email) {
+        super(username, password, UserRole.SELLER, email);
+    }
+
+    public Seller() {
+        super();
     }
 
     @Override

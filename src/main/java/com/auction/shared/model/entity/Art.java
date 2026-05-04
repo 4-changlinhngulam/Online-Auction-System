@@ -5,6 +5,10 @@ public class Art extends Item {
         super(id, name, startingPrice);
     }
 
+    public Art() {
+        super();
+    }
+
     @Override
     public void printInfo() {
         System.out.println("Art Item: " + getName());

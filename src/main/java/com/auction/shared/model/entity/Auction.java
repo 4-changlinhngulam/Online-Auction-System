@@ -34,6 +34,54 @@ public class Auction extends Entity {
     }
     
     public Auction() {}
+// Getter/Setter
+    public Item getItem() {
+        return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
+    }
+
+    public Bidder getCurrentWinner() {
+        return currentWinner;
+    }
+
+    public void setCurrentWinner(Bidder currentWinner) {
+        this.currentWinner = currentWinner;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public List<BidTransaction> getBidHistory() {
+        return bidHistory;
+    }
+
+    public void setBidHistory(List<BidTransaction> bidHistory) {
+        this.bidHistory = bidHistory;
+    }
+
+    public List<BidObserver> getObservers() {
+        return observers;
+    }
+
+    public void setObservers(List<BidObserver> observers) {
+        this.observers = observers;
+    }
 
     /**
      * Hàm xử lý đặt giá đồng thời.

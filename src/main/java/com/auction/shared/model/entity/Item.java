@@ -17,6 +17,10 @@ public abstract class Item extends Entity {
         this.status = "PENDING";
     }
 
+    public Item() {
+
+    }
+
     // Getters & Setters (Encapsulation)
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

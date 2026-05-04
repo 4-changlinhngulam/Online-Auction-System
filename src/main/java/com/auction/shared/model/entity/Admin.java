@@ -10,8 +10,12 @@ import com.auction.shared.model.enums.UserRole;
  */
 public class Admin extends User {
 
-    public Admin(String username, String password) {
-        super(username, password, UserRole.ADMIN);
+    public Admin(String username, String password, String email) {
+        super(username, password, UserRole.ADMIN, email);
+    }
+
+    public Admin() {
+        super();
     }
 
     @Override

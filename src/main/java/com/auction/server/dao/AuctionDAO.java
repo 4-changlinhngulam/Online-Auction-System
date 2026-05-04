@@ -1,277 +1,191 @@
 package com.auction.server.dao;
 
+import com.auction.shared.model.entity.Auction;
+import com.auction.shared.model.entity.Bidder;
+import com.auction.shared.model.entity.Item;
+import com.auction.shared.model.entity.User;
+import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.exception.DataPersistenceException;
 import com.auction.shared.exception.EntityNotFoundException;
-import com.auction.shared.model.entity.Auction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.*;
-import java.util.*;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * DAO cho Auction - Quản lý lưu trữ và truy xuất dữ liệu phiên đấu giá
- * Sử dụng Serialization để đọc/ghi dữ liệu từ file
- *
- * Exception-based error handling:
- * - DataPersistenceException: Thrown for I/O and serialization errors
- * - EntityNotFoundException: Thrown when auction is not found
- * - IllegalArgumentException: Thrown for invalid input
+ * DAO cho Auction. Kết nối trực tiếp với MySQL trên Cloud.
  */
 public class AuctionDAO {
-    private static final Logger logger = LoggerFactory.getLogger(AuctionDAO.class);
-    private static final String DATA_FILE = "data/auctions.dat";
 
-    /**
-     * Lưu một phiên đấu giá MỚI vào file.
-     * @param auction - Phiên đấu giá cần lưu
-     * @throws DataPersistenceException nếu có lỗi khi ghi file
-     * @throws IllegalArgumentException nếu ID đã tồn tại (Chống duplicate)
-     */
+
+    // 1. HÀM THÊM MỚI (SAVE)
+
     public void save(Auction auction) throws DataPersistenceException {
         if (auction == null || auction.getId() == null) {
             throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
-        try {
-            List<Auction> auctions = findAll();
+        String sql = "INSERT INTO auctions (id, item_id, current_price, current_winner_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-            boolean exists = auctions.stream()
-                    .anyMatch(a -> a.getId().equals(auction.getId()));
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            if (exists) {
-                // NÉM LỖI DUPLICATE NGAY LẬP TỨC
-                logger.error("Từ chối thêm mới: Phiên đấu giá ID {} đã tồn tại!", auction.getId());
-                throw new IllegalArgumentException("Phiên đấu giá với ID " + auction.getId() + " đã tồn tại. Vui lòng dùng hàm update() để cập nhật.");
-            }
+            pstmt.setString(1, auction.getId());
 
-            // Nếu chưa tồn tại thì mới cho add vào list
-            auctions.add(auction);
-            logger.info("Thêm mới phiên đấu giá ID: {}", auction.getId());
+            // Xử lý Khóa ngoại: Lấy ID của Item (Nếu item bị null thì báo lỗi ngay)
+            if (auction.getItem() == null) throw new IllegalArgumentException("Phiên đấu giá phải có Item đính kèm!");
+            pstmt.setString(2, auction.getItem().getId());
 
-            // Ghi đè file
-            writeToFile(auctions);
-            logger.info("✓ Lưu phiên đấu giá thành công!");
+            pstmt.setDouble(3, auction.getCurrentPrice());
 
-        } catch (IllegalArgumentException | DataPersistenceException e) {
-            throw e; // Ném thẳng ra ngoài để tầng Service xử lý
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi lưu phiên đấu giá", e);
-        }
-    }
-
-    /**
-     * Tìm phiên đấu giá theo ID
-     * @param id - ID của phiên đấu giá
-     * @return Auction nếu tìm thấy
-     * @throws EntityNotFoundException nếu không tìm thấy
-     * @throws DataPersistenceException nếu có lỗi khi đọc file
-     */
-    public Auction findById(String id) throws EntityNotFoundException, DataPersistenceException {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID không được phép null hoặc rỗng");
-        }
-
-        try {
-            List<Auction> auctions = findAll();
-            Auction result = auctions.stream()
-                    .filter(a -> a.getId().equals(id))
-                    .findFirst()
-                    .orElse(null);
-
-            if (result != null) {
-                logger.debug("Tìm thấy phiên đấu giá ID: {}", id);
-                return result;
+            // Xử lý người thắng hiện tại (Có thể null nếu chưa ai đấu giá)
+            if (auction.getCurrentWinner() != null) {
+                pstmt.setString(4, auction.getCurrentWinner().getId());
             } else {
-                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + id);
+                pstmt.setNull(4, Types.VARCHAR);
             }
 
-        } catch (EntityNotFoundException e) {
-            throw e;
-        } catch (DataPersistenceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi tìm phiên đấu giá ID: " + id, e);
+            // Đổi LocalDateTime trong Java thành Timestamp trong MySQL
+            pstmt.setTimestamp(5, auction.getStartTime() != null ? Timestamp.valueOf(auction.getStartTime()) : null);
+            pstmt.setTimestamp(6, auction.getEndTime() != null ? Timestamp.valueOf(auction.getEndTime()) : null);
+
+            // Lưu Enum dưới dạng chuỗi (String)
+            pstmt.setString(7, auction.getStatus() != null ? auction.getStatus().name() : AuctionStatus.OPEN.name());
+
+            pstmt.executeUpdate();
+            System.out.println("xĐã lưu phiên đấu giá " + auction.getId() + " lên Cloud!");
+
+        } catch (SQLIntegrityConstraintViolationException e) {
+            // MySQL tự động chặn ID trùng lặp
+            throw new IllegalArgumentException("Từ chối thêm mới: Phiên đấu giá ID '" + auction.getId() + "' đã tồn tại!");
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi hệ thống khi lưu Auction vào Database", e);
         }
     }
 
-    /**
-     * Lấy tất cả phiên đấu giá
-     * @return List danh sách tất cả Auction, rỗng nếu không có
-     * @throws DataPersistenceException nếu có lỗi khi đọc file
-     */
-    public List<Auction> findAll() throws DataPersistenceException {
-        try {
-            File file = new File(DATA_FILE);
 
-            if (!file.exists()) {
-                logger.debug("File dữ liệu chưa tồn tại, khởi tạo danh sách rỗng");
-                return new ArrayList<>();
-            }
+    // 2. HÀM CẬP NHẬT (UPDATE)
 
-            List<Auction> auctions = readFromFile();
-            logger.debug("Lấy {} phiên đấu giá từ file", auctions.size());
-            return auctions;
-
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi lấy danh sách phiên đấu giá", e);
-        }
-    }
-
-    /**
-     * Cập nhật một phiên đấu giá hiện có
-     * @param auction - Phiên đấu giá cần cập nhật
-     * @throws EntityNotFoundException nếu phiên đấu giá không tồn tại
-     * @throws DataPersistenceException nếu có lỗi khi ghi file
-     */
-    public void update(Auction auction) throws EntityNotFoundException, DataPersistenceException {
+    public void update(Auction auction) throws DataPersistenceException, EntityNotFoundException {
         if (auction == null || auction.getId() == null) {
             throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
-        try {
-            List<Auction> auctions = findAll();
-            boolean found = false;
+        String sql = "UPDATE auctions SET item_id = ?, current_price = ?, current_winner_id = ?, start_time = ?, end_time = ?, status = ? WHERE id = ?";
 
-            for (int i = 0; i < auctions.size(); i++) {
-                if (auctions.get(i).getId().equals(auction.getId())) {
-                    auctions.set(i, auction);
-                    found = true;
-                    logger.info("Cập nhật phiên đấu giá ID: {}", auction.getId());
-                    break;
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, auction.getItem().getId());
+            pstmt.setDouble(2, auction.getCurrentPrice());
+
+            if (auction.getCurrentWinner() != null) {
+                pstmt.setString(3, auction.getCurrentWinner().getId());
+            } else {
+                pstmt.setNull(3, Types.VARCHAR);
+            }
+
+            pstmt.setTimestamp(4, auction.getStartTime() != null ? Timestamp.valueOf(auction.getStartTime()) : null);
+            pstmt.setTimestamp(5, auction.getEndTime() != null ? Timestamp.valueOf(auction.getEndTime()) : null);
+            pstmt.setString(6, auction.getStatus().name());
+
+            pstmt.setString(7, auction.getId()); // Đặt ID cho điều kiện WHERE
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new EntityNotFoundException("Không thể cập nhật: Không tìm thấy phiên đấu giá ID '" + auction.getId() + "'");
+            }
+
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi khi cập nhật Auction trên Database", e);
+        }
+    }
+
+
+    // 3. LẤY TẤT CẢ PHIÊN ĐẤU GIÁ (FIND ALL)
+
+    public List<Auction> findAll() throws DataPersistenceException {
+        List<Auction> auctions = new ArrayList<>();
+        String sql = "SELECT * FROM auctions";
+
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            // Để lấy được Item và User đầy đủ, chúng ta nhờ ItemDAO và UserDAO lấy hộ
+            ItemDAO itemDAO = new ItemDAO();
+            UserDAO userDAO = new UserDAO();
+
+            while (rs.next()) {
+                Auction auction = new Auction();
+                auction.setId(rs.getString("id"));
+                auction.setCurrentPrice(rs.getDouble("current_price"));
+                auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
+
+                // Chuyển Timestamp từ Database ngược lại thành LocalDateTime
+                if (rs.getTimestamp("start_time") != null) {
+                    auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
                 }
-            }
-
-            if (!found) {
-                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + auction.getId());
-            }
-
-            writeToFile(auctions);
-            logger.info("✓ Cập nhật phiên đấu giá thành công!");
-
-        } catch (EntityNotFoundException e) {
-            throw e;
-        } catch (DataPersistenceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi cập nhật phiên đấu giá", e);
-        }
-    }
-
-    /**
-     * Xóa một phiên đấu giá theo ID
-     * @param id - ID của phiên đấu giá cần xóa
-     * @throws EntityNotFoundException nếu phiên đấu giá không tồn tại
-     * @throws DataPersistenceException nếu có lỗi khi ghi file
-     */
-    public void delete(String id) throws EntityNotFoundException, DataPersistenceException {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID không được phép null hoặc rỗng");
-        }
-
-        try {
-            List<Auction> auctions = findAll();
-            boolean removed = auctions.removeIf(a -> a.getId().equals(id));
-
-            if (!removed) {
-                throw new EntityNotFoundException("Không tìm thấy phiên đấu giá với ID: " + id);
-            }
-
-            writeToFile(auctions);
-            logger.info("✓ Xóa phiên đấu giá ID: {} thành công!", id);
-
-        } catch (EntityNotFoundException e) {
-            throw e;
-        } catch (DataPersistenceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi xóa phiên đấu giá ID: " + id, e);
-        }
-    }
-
-    /**
-     * Lấy số lượng phiên đấu giá
-     * @return Số lượng phiên đấu giá
-     * @throws DataPersistenceException nếu có lỗi khi đọc file
-     */
-    public int getCount() throws DataPersistenceException {
-        try {
-            int count = findAll().size();
-            logger.debug("Tổng số phiên đấu giá: {}", count);
-            return count;
-        } catch (DataPersistenceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi đếm phiên đấu giá", e);
-        }
-    }
-
-    /**
-     * === PRIVATE HELPER METHODS ===
-     */
-
-    /**
-     * Ghi danh sách Auction vào file bằng Serialization
-     * @throws DataPersistenceException nếu có lỗi I/O
-     */
-    private void writeToFile(List<Auction> auctions) throws DataPersistenceException {
-        try {
-            File dir = new File("data");
-            if (!dir.exists()) {
-                if (dir.mkdirs()) {
-                    logger.debug("Tạo thư mục data thành công");
+                if (rs.getTimestamp("end_time") != null) {
+                    auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
                 }
-            }
 
-            try (ObjectOutputStream oos = new ObjectOutputStream(
-                    new FileOutputStream(DATA_FILE))) {
-                oos.writeObject(auctions);
-                oos.flush();
-                logger.debug("Ghi {} phiên đấu giá vào file thành công", auctions.size());
+                // --- Xử lý ghép nối Item ---
+                String itemId = rs.getString("item_id");
+                try {
+                    Item item = itemDAO.findById(itemId);
+                    auction.setItem(item);
+                } catch (EntityNotFoundException e) {
+                    System.err.println("Cảnh báo: Không tìm thấy Item gốc cho Auction " + auction.getId());
+                }
+
+                // --- Xử lý ghép nối Winner ---
+                String winnerId = rs.getString("current_winner_id");
+                if (winnerId != null) {
+                    try {
+                        User winner = userDAO.findById(winnerId);
+                        auction.setCurrentWinner((Bidder) winner); // Ép kiểu sang Bidder
+                    } catch (EntityNotFoundException e) {
+                        System.err.println("Cảnh báo: Không tìm thấy Winner cho Auction " + auction.getId());
+                    }
+                }
+
+                auctions.add(auction);
             }
-        } catch (IOException e) {
-            throw new DataPersistenceException("Lỗi khi ghi dữ liệu vào file", e);
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi khi đọc danh sách Auction từ DB", e);
         }
+        return auctions;
     }
 
-    /**
-     * Đọc danh sách Auction từ file bằng Serialization
-     * @throws DataPersistenceException nếu có lỗi I/O hoặc deserialization
-     */
-    @SuppressWarnings("unchecked")
-    private List<Auction> readFromFile() throws DataPersistenceException {
-        try (ObjectInputStream ois = new ObjectInputStream(
-                new FileInputStream(DATA_FILE))) {
-            return (List<Auction>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            throw new DataPersistenceException("Lỗi khi đọc dữ liệu từ file", e);
-        }
+
+    // 4. TÌM THEO ID (FIND BY ID)
+
+    public Auction findById(String id) throws DataPersistenceException, EntityNotFoundException {
+        return findAll().stream()
+                .filter(a -> a.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy phiên đấu giá có ID: " + id));
     }
 
-    /**
-     * Kiểm tra xem file dữ liệu có tồn tại hay không
-     * @return true nếu file tồn tại, false nếu không
-     */
-    public boolean dataFileExists() {
-        boolean exists = new File(DATA_FILE).exists();
-        logger.debug("File dữ liệu tồn tại: {}", exists);
-        return exists;
-    }
 
-    /**
-     * Xóa toàn bộ dữ liệu (reset file)
-     * @throws DataPersistenceException nếu có lỗi khi ghi file
-     */
-    public void clearAll() throws DataPersistenceException {
-        try {
-            File file = new File(DATA_FILE);
-            if (file.exists()) {
-                writeToFile(new ArrayList<>());
-                logger.info("✓ Xóa toàn bộ dữ liệu thành công!");
+    // 5. XÓA (DELETE)
+
+    public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
+        String sql = "DELETE FROM auctions WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, id);
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new EntityNotFoundException("Không thể xóa: Không tìm thấy phiên đấu giá ID '" + id + "'");
             }
-        } catch (DataPersistenceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new DataPersistenceException("Lỗi khi xóa dữ liệu", e);
+
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi khi xóa Auction khỏi Database", e);
         }
     }
 }

@@ -1,5 +1,9 @@
 package com.auction.server.service;
-
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.shared.exception.AuctionClosedException;
 import com.auction.shared.exception.InvalidBidException;
@@ -25,10 +29,14 @@ public class AuctionManager {
 
     // 4. Kết nối với Database
     private final AuctionDAO auctionDAO;
+
+    // Khởi tạo một bộ đếm giờ với luồng chạy ngầm (pool size = 5)
+    private final ScheduledExecutorService scheduler;
     private AuctionManager() {
         this.activeAuctions = new ConcurrentHashMap<>();
         this.observers = new ArrayList<>();
         this.auctionDAO = new AuctionDAO();
+        this.scheduler = Executors.newScheduledThreadPool(5);
     }
     // Phương thức public static để lấy thể hiện duy nhất (Double-checked locking)
     public static AuctionManager getInstance() {
@@ -123,5 +131,29 @@ public class AuctionManager {
             observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
         }
     }
+
+    /**
+     * Lên lịch tự động kết thúc phiên đấu giá
+     */
+    public void scheduleAuctionEnd(Auction auction) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime = auction.getEndTime();
+
+        // Tính khoảng thời gian từ bây giờ đến lúc kết thúc (tính bằng mili-giây)
+        long delayInMillis = Duration.between(now, endTime).toMillis();
+
+        if (delayInMillis <= 0) {
+            // Nếu thời gian kết thúc ở trong quá khứ, đóng phiên ngay lập tức
+            endAuction(auction.getId());
+        } else {
+            // Đặt báo thức: Lệnh () -> endAuction(...) sẽ được chạy sau "delayInMillis"
+            scheduler.schedule(() -> {
+                System.out.println("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
+                endAuction(auction.getId());
+            }, delayInMillis, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    
 }
 

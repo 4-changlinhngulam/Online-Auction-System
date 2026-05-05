@@ -7,6 +7,8 @@ import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.exception.DataPersistenceException;
 import com.auction.shared.exception.EntityNotFoundException;
+import com.auction.server.service.ItemFactory;
+import com.auction.shared.model.enums.ItemType;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -188,4 +190,67 @@ public class AuctionDAO {
             throw new DataPersistenceException("Lỗi khi xóa Auction khỏi Database", e);
         }
     }
+
+
+    // 6. LẤY CÁC PHIÊN ĐẤU GIÁ MỞ (getOpenAuctions)
+    /**
+     * Lấy danh sách tất cả các phiên đấu giá đang ở trạng thái OPEN.
+     * Dùng để khôi phục bộ đếm thời gian khi Server khởi động lại.
+     */
+    public List<Auction> getOpenAuctions() {
+        List<Auction> openAuctions = new ArrayList<>();
+        // Truy vấn kết nối bảng auctions với bảng items (để lấy thông tin món đồ) và bảng users (nếu có người đang thắng)
+        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, " +
+                "u.username as winner_username " +
+                "FROM auctions a " +
+                "JOIN items i ON a.item_id = i.id " +
+                "LEFT JOIN users u ON a.current_winner_id = u.id " +
+                "WHERE a.status = 'OPEN'";
+
+        try (Connection conn = DatabaseConnection.getInstance();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                Auction auction = new Auction();
+                auction.setId(rs.getString("id"));
+                auction.setCurrentPrice(rs.getDouble("current_price"));
+                auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
+                auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
+                auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
+
+                // 1. Lấy các giá trị cần thiết từ Database ra các biến trung gian
+                String itemTypeStr = rs.getString("item_type");
+                ItemType itemType = ItemType.valueOf(itemTypeStr);
+                String itemId = rs.getString("item_id");
+                String itemName = rs.getString("item_name");
+                double startingPrice = rs.getDouble("starting_price");
+
+                // 2. Gọi ItemFactory với 4 tham số theo đúng thiết kế của bạn
+                Item item = ItemFactory.createItem(itemType, itemId, itemName, startingPrice);
+
+                // 3. Vì description không có trong tham số của Factory, ta gọi hàm set riêng
+                item.setDescription(rs.getString("item_desc"));
+
+                auction.setItem(item);
+
+                // Khôi phục thông tin người thắng hiện tại (nếu có)
+                String winnerId = rs.getString("current_winner_id");
+                if (winnerId != null) {
+                    Bidder winner = new Bidder();
+                    winner.setId(winnerId);
+                    winner.setName(rs.getString("winner_username"));
+                    auction.setCurrentWinner(winner);
+                }
+
+                openAuctions.add(auction);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy danh sách phiên đấu giá đang mở: " + e.getMessage());
+        }
+
+        return openAuctions;
+    }
+
 }

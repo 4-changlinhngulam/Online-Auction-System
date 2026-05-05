@@ -6,15 +6,10 @@ import java.util.Map;
 public class ItemFactory {
 
     /**
-     * 1. Enum ItemType giúp chuẩn hóa các loại sản phẩm hợp lệ trong hệ thống.
-     * 2. Ngăn chặn triệt để lỗi do truyền sai chuỗi (ví dụ: "ELECTRONIC" thay vì "ELECTRONICS").
-     */
-
-    /**
-     * 3. Factory Method nhận Enum làm đầu vào và khởi tạo đối tượng Item tương ứng.
-     * 4. Áp dụng Switch Expression (Dấu mũi tên '->') giúp code gọn gàng, trả về (return) trực tiếp
+     * 1. Factory Method nhận Enum làm đầu vào và khởi tạo đối tượng Item tương ứng.
+     * 2. Áp dụng Switch Expression (Dấu mũi tên '->') giúp code gọn gàng, trả về (return) trực tiếp
      * mà không cần viết lặp lại chữ 'return' hay 'break' ở từng case.
-     * 5. Khởi tạo đối tượng ngay lập tức với các thông số id, name, startingPrice thông qua constructor.
+     * 3. Khởi tạo đối tượng ngay lập tức với các thông số id, name, startingPrice thông qua constructor.
      */
     public static Item createItem(ItemType type, String id, String name, double startingPrice) {
         if (type == null) {

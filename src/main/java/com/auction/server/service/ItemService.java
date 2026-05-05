@@ -32,7 +32,6 @@ public class ItemService {
 
         try {
             itemDAO.save(newItem);
-            // Dùng constructor: success = true, message = "...", data = null
             return new Response(true, "Sản phẩm đã được tạo thành công: " + newItem.getName(), null);
         } catch (Exception e) {
             System.err.println("Lỗi khi lưu Item: " + e.getMessage());
@@ -67,7 +66,6 @@ public class ItemService {
 
         try {
             Item item = itemDAO.findById(id);
-
             if (item != null) {
                 return new Response(true, "Lấy thông tin sản phẩm thành công.", item);
             } else {
@@ -126,14 +124,11 @@ public class ItemService {
         }
 
         try {
-            // Gọi tầng DAO để lấy dữ liệu
             List<Item> items = itemDAO.searchByName(keyword.trim());
 
             if (items.isEmpty()) {
                 return new Response(true, "Không tìm thấy sản phẩm nào khớp với từ khóa: " + keyword, null);
             }
-
-            // Đóng gói danh sách tìm được vào Response
             return new Response(true, "Tìm thấy " + items.size() + " sản phẩm.", items);
 
         } catch (Exception e) {

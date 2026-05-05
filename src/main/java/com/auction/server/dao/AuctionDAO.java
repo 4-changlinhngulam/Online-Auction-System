@@ -34,7 +34,7 @@ public class AuctionDAO {
 
             pstmt.setString(1, auction.getId());
 
-            // Xử lý Khóa ngoại: Lấy ID của Item (Nếu item bị null thì báo lỗi ngay)
+            // Xử lý Khóa ngoại: Lấy ID của Item
             if (auction.getItem() == null) throw new IllegalArgumentException("Phiên đấu giá phải có Item đính kèm!");
             pstmt.setString(2, auction.getItem().getId());
 
@@ -114,7 +114,7 @@ public class AuctionDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
-            // Để lấy được Item và User đầy đủ, chúng ta nhờ ItemDAO và UserDAO lấy hộ
+            // Nhờ ItemDAO và UserDAO lấy hộ
             ItemDAO itemDAO = new ItemDAO();
             UserDAO userDAO = new UserDAO();
 
@@ -146,7 +146,7 @@ public class AuctionDAO {
                 if (winnerId != null) {
                     try {
                         User winner = userDAO.findById(winnerId);
-                        auction.setCurrentWinner((Bidder) winner); // Ép kiểu sang Bidder
+                        auction.setCurrentWinner((Bidder) winner);
                     } catch (EntityNotFoundException e) {
                         System.err.println("Cảnh báo: Không tìm thấy Winner cho Auction " + auction.getId());
                     }
@@ -226,10 +226,8 @@ public class AuctionDAO {
                 String itemName = rs.getString("item_name");
                 double startingPrice = rs.getDouble("starting_price");
 
-                // 2. Gọi ItemFactory với 4 tham số theo đúng thiết kế của bạn
+                // 2. Gọi ItemFactory
                 Item item = ItemFactory.createItem(itemType, itemId, itemName, startingPrice);
-
-                // 3. Vì description không có trong tham số của Factory, ta gọi hàm set riêng
                 item.setDescription(rs.getString("item_desc"));
 
                 auction.setItem(item);

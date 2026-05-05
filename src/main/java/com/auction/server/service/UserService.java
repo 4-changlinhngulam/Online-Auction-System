@@ -41,11 +41,9 @@ public class UserService {
             // Che/Xóa mật khẩu trước khi đóng gói gửi về Client qua mạng
             user.setPassword(null);
 
-            // Trả về Response thành công kèm thông tin User
             return new Response(true, "Đăng nhập thành công.", user);
 
         } catch (AuthenticationException authEx) {
-            // Bắt lỗi xác thực và chuyển thành Response.error
             return Response.error(authEx.getMessage());
         } catch (Exception e) {
             System.err.println("Lỗi hệ thống khi đăng nhập: " + e.getMessage());
@@ -73,7 +71,6 @@ public class UserService {
                 user.setId(UUID.randomUUID().toString());
             }
             
-            // 3. Lưu vào Database
             userDAO.save(user);
 
             // 4. Che mật khẩu trước khi trả về

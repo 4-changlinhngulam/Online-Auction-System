@@ -1,9 +1,15 @@
 package com.auction.server.service;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.auction.server.dao.AuctionDAO;
 import com.auction.shared.exception.AuctionClosedException;
 import com.auction.shared.exception.InvalidBidException;
@@ -12,16 +18,13 @@ import com.auction.shared.model.entity.BidObserver;
 import com.auction.shared.model.entity.Bidder;
 import com.auction.shared.model.enums.AuctionStatus;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
 /** Singleton – Quản lý toàn bộ phiên đấu giá. Xử lý concurrency + Observer notify. */
 public class AuctionManager {
     // 1. Singleton: Đảm bảo chỉ có 1 Manager duy nhất trên toàn Server
     private static AuctionManager instance;
 
-    // 2. Lưu trữ các phiên đấu giá đang chạy. Dùng ConcurrentHashMap để an toàn với đa luồng!
+    // 2. Lưu trữ các phiên đấu giá đang chạy.
     private final Map<String, Auction> activeAuctions;
 
     // 3. Danh sách các Client đang theo dõi đấu giá (Dùng cho Observer Pattern)
@@ -109,7 +112,6 @@ public class AuctionManager {
     }
     // OBSERVER PATTERN (CƠ CHẾ THÔNG BÁO PUSH)
 
-
     public void addObserver(BidObserver observer) {
         if (!observers.contains(observer)) {
             observers.add(observer);
@@ -139,7 +141,7 @@ public class AuctionManager {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
 
-        // Tính khoảng thời gian từ bây giờ đến lúc kết thúc (tính bằng mili-giây)
+        // Tính khoảng thời gian từ bây giờ đến lúc kết thúc
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {

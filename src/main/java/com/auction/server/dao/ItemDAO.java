@@ -1,11 +1,13 @@
 package com.auction.server.dao;
 
+import com.auction.server.service.ItemFactory;
 import com.auction.shared.exception.DataPersistenceException;
 import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Art;
 import com.auction.shared.model.entity.Electronics;
 import com.auction.shared.model.entity.Item;
 import com.auction.shared.model.entity.Vehicle;
+import com.auction.shared.model.enums.ItemType;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -141,6 +143,40 @@ public class ItemDAO {
         } catch (SQLException e) {
             throw new DataPersistenceException("Lỗi khi xóa Item", e);
         }
+    }
+
+    // 7. TÌM BẰNG TỪ KHÓA
+        
+    public List<Item> searchByName(String keyword) {
+        List<Item> resultList = new ArrayList<>();
+        // Sử dụng LIKE để tìm kiếm chứa từ khóa, bất kể chữ hoa chữ thường
+        String sql = "SELECT * FROM items WHERE name LIKE ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // Thêm dấu % vào 2 đầu từ khóa để tìm kiếm chuỗi con
+            pstmt.setString(1, "%" + keyword + "%");
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // Tái sử dụng ItemFactory
+                    ItemType type = ItemType.valueOf(rs.getString("item_type"));
+                    Item item = ItemFactory.createItem(
+                            type,
+                            rs.getString("id"),
+                            rs.getString("name"),
+                            rs.getDouble("starting_price")
+                    );
+                    item.setDescription(rs.getString("description"));
+
+                    resultList.add(item);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm kiếm Item theo tên: " + e.getMessage());
+        }
+        return resultList;
     }
 
     // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---

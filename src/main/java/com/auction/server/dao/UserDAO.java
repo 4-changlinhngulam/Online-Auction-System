@@ -125,9 +125,9 @@ public class UserDAO {
     }
 
 
-    // 5. XÓA USER (DELETE)
+    // 5. XÓA USER BẰNG ID (DELETE by ID)
 
-    public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
+    public void deleteByID(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM users WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
@@ -143,6 +143,26 @@ public class UserDAO {
         }
     }
 
+    // 6. TÌM USER THEO TÊN (FIND by USERNAME)
+    public User findByUsername(String username) throws DataPersistenceException {
+        String sql = "SELECT * FROM users WHERE username = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, username);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                } else {
+                    return null;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi khi tìm User theo Username", e);
+        }
+    }
     // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         String role = rs.getString("role");

@@ -53,6 +53,7 @@ public class ClientHandler implements Runnable {
             case UPDATE_ITEM:
             case DELETE_ITEM:
             case GET_ALL_ITEMS:
+            case SEARCH_ITEM:
             case CREATE_AUCTION:
             case GET_AUCTION:
             case GET_ALL_AUCTIONS:

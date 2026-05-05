@@ -12,7 +12,7 @@ public class DatabaseConnection {
     private static String USER;
     private static String PASSWORD;
 
-    private static Connection connection;
+    private static DatabaseConnection instance;
 
     // Khối static: Sẽ tự động chạy 1 lần duy nhất khi class này được gọi đến
     static {
@@ -39,17 +39,21 @@ public class DatabaseConnection {
 
     private DatabaseConnection() {}
 
-    public static synchronized Connection getInstance() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            try {
-                Class.forName("com.mysql.cj.jdbc.Driver");
-                // Sử dụng các biến đã được đọc từ file
-                connection = DriverManager.getConnection(URL, USER, PASSWORD);
-                System.out.println("Đã kết nối thành công tới Database qua cấu hình file!");
-            } catch (ClassNotFoundException e) {
-                throw new SQLException("Không tìm thấy MySQL Driver!", e);
-            }
+    public static synchronized DatabaseConnection getInstance() {
+        if (instance == null) {
+            instance = new DatabaseConnection();
         }
-        return connection;
+        return instance;
+    }
+
+    public Connection getConnection() throws SQLException {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            System.out.println("Đã kết nối thành công tới Database qua cấu hình file!");
+            return connection;
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("Không tìm thấy MySQL Driver!", e);
+        }
     }
 }

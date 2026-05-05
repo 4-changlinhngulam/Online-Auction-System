@@ -23,7 +23,7 @@ public class ItemDAO {
 
         String sql = "INSERT INTO items (id, name, description, starting_price, item_type) VALUES (?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, item.getId());
@@ -60,7 +60,7 @@ public class ItemDAO {
 
         String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, item_type = ? WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, item.getName());
@@ -88,7 +88,7 @@ public class ItemDAO {
     public Item findById(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "SELECT * FROM items WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, id);
@@ -112,7 +112,7 @@ public class ItemDAO {
         List<Item> items = new ArrayList<>();
         String sql = "SELECT * FROM items";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -130,7 +130,7 @@ public class ItemDAO {
     public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM items WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, id);

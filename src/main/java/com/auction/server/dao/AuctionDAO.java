@@ -29,7 +29,7 @@ public class AuctionDAO {
 
         String sql = "INSERT INTO auctions (id, item_id, current_price, current_winner_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, auction.getId());
@@ -75,7 +75,7 @@ public class AuctionDAO {
 
         String sql = "UPDATE auctions SET item_id = ?, current_price = ?, current_winner_id = ?, start_time = ?, end_time = ?, status = ? WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, auction.getItem().getId());
@@ -110,7 +110,7 @@ public class AuctionDAO {
         List<Auction> auctions = new ArrayList<>();
         String sql = "SELECT * FROM auctions";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
@@ -176,7 +176,7 @@ public class AuctionDAO {
     public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM auctions WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, id);
@@ -207,7 +207,7 @@ public class AuctionDAO {
                 "LEFT JOIN users u ON a.current_winner_id = u.id " +
                 "WHERE a.status = 'OPEN'";
 
-        try (Connection conn = DatabaseConnection.getInstance();
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 

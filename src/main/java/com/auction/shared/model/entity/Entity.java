@@ -1,5 +1,6 @@
 package com.auction.shared.model.entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -7,9 +8,10 @@ import java.time.LocalDateTime;
  * 2. Mục đích của lớp này là gom nhóm các thuộc tính dùng chung (id, createdAt) để tái sử dụng code, tránh lặp lại ở các lớp con.
  * 3. Các thực thể chính trong hệ thống như User, Item, Auction, và BidTransaction đều sẽ kế thừa từ lớp này.
  */
-public abstract class Entity {
+public abstract class Entity implements Serializable {
     private String id;
     private LocalDateTime createdAt;
+    private static final long serialVersionUID = 1L;
 
     public Entity() {
         this.createdAt = LocalDateTime.now();

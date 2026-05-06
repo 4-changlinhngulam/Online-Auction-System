@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.RegisterController">
+
+    <center>
+        <AnchorPane prefWidth="763.0" BorderPane.alignment="CENTER">
+            <children>
+
+                <!-- Tấm kính glass chứa toàn bộ form -->
+                <VBox alignment="CENTER"
+                      spacing="8"
+                      styleClass="glass-panel"
+                      AnchorPane.bottomAnchor="20.0"
+                      AnchorPane.leftAnchor="200.0"
+                      AnchorPane.rightAnchor="200.0"
+                      AnchorPane.topAnchor="20.0">
+
+                    <padding>
+                        <Insets bottom="20" left="40" right="40" top="20"/>
+                    </padding>
+
+                    <!-- Tiêu đề -->
+                    <Label alignment="CENTER"
+                           maxWidth="Infinity"
+                           styleClass="title-main"
+                           text="ĐĂNG KÝ TÀI KHOẢN"
+                           wrapText="true">
+                        <font>
+                            <Font size="24.0"/>
+                        </font>
+                    </Label>
+
+                    <Region prefHeight="8"/>
+
+                    <!-- HỌ TÊN -->
+                    <Label maxWidth="Infinity"
+                           styleClass="label"
+                           text="HỌ VÀ TÊN"/>
+                    <TextField fx:id="fullNameField"
+                               maxWidth="Infinity"
+                               promptText="Nhập họ và tên"
+                               styleClass="input-field"/>
+
+                    <!-- EMAIL -->
+                    <Label maxWidth="Infinity"
+                           styleClass="label"
+                           text="EMAIL"/>
+                    <TextField fx:id="emailField"
+                               maxWidth="Infinity"
+                               promptText="Nhập email của bạn"
+                               styleClass="input-field"/>
+
+                    <!-- PASSWORD -->
+                    <Label maxWidth="Infinity"
+                           styleClass="label"
+                           text="MẬT KHẨU"/>
+                    <PasswordField fx:id="passwordField"
+                                   maxWidth="Infinity"
+                                   promptText="Nhập mật khẩu"
+                                   styleClass="input-field"/>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <Label maxWidth="Infinity"
+                           styleClass="label"
+                           text="XÁC NHẬN MẬT KHẨU"/>
+                    <PasswordField fx:id="confirmPasswordField"
+                                   maxWidth="Infinity"
+                                   promptText="Nhập lại mật khẩu"
+                                   styleClass="input-field"/>
+
+                    <!-- ROLE -->
+                    <Label maxWidth="Infinity"
+                           styleClass="label"
+                           text="VAI TRÒ"/>
+                    <ComboBox fx:id="roleComboBox"
+                              maxWidth="Infinity"
+                              promptText="Chọn vai trò"
+                              styleClass="input-field"/>
+
+                    <Region prefHeight="8"/>
+
+                    <!-- Button ĐĂNG KÝ -->
+                    <Button fx:id="registerButton"
+                            maxWidth="Infinity"
+                            onAction="#handleRegister"
+                            styleClass="button-signin"
+                            text="ĐĂNG KÝ"/>
+
+                    <!-- Button QUAY LẠI LOGIN -->
+                    <Button fx:id="backToLoginButton"
+                            maxWidth="Infinity"
+                            onAction="#handleBackToLogin"
+                            styleClass="button-outline"
+                            text="ĐÃ CÓ TÀI KHOẢN? ĐĂNG NHẬP"/>
+
+                    <!-- Label lỗi -->
+                    <Label fx:id="errorLabel"
+                           alignment="CENTER"
+                           maxWidth="Infinity"
+                           style="-fx-text-fill: #ff6b6b; -fx-font-size: 13px;"
+                           text=""
+                           wrapText="true"/>
+
+                </VBox>
+            </children>
+        </AnchorPane>
+    </center>
+
+</BorderPane>

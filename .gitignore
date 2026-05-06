@@ -1,0 +1,22 @@
+# Maven build output
+target/
+
+# IntelliJ IDEA (không commit cấu hình IDE cá nhân)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java compiled
+*.class
+*.jar
+
+# JavaFX / runtime
+*.log
+
+# Database credentials
+src/main/resources/application.properties

@@ -1,0 +1,8 @@
+# FILE HƯỚNG DẪN CẤU HÌNH DATABASE CHO TEAM
+# Cách dùng:
+# 1. Copy file này và đổi tên bản copy thành "application.properties"
+# 2. Điền mật khẩu được cung cấp vào dòng db.password bên dưới và xóa các dòng trên.
+
+db.url=jdbc:mysql://mysql-cdf247b-nguyenvietngocduy2003-5af7.l.aivencloud.com:24276/online_auction?sslMode=REQUIRED&trustServerCertificate=true
+db.username=avnadmin
+db.password=

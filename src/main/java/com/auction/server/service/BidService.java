@@ -15,7 +15,6 @@ public class BidService {
         this.auctionManager = auctionManager;
     }
 
-    // --- NHÓM NÓNG ---
     public Response placeBid(String auctionId, String bidderId, double amount) {
         // Validate dữ liệu sơ bộ
         if (amount <= 0) {

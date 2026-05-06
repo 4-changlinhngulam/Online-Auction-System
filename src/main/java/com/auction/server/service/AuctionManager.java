@@ -208,8 +208,7 @@ public class AuctionManager {
             // 5. Cập nhật giá mới của phiên đấu giá vào bảng 'auctions'
             auctionDAO.update(auction);
 
-            // 6. Phát thanh cho toàn bộ người xem (Nếu bạn đã có hàm này)
-            // notifyObservers(auction);
+            notifyObservers(auction);
 
             return new Response(true, "Đặt giá thành công!", null);
 

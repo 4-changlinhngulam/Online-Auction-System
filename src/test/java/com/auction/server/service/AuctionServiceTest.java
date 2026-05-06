@@ -9,7 +9,7 @@ import org.junit.jupiter.api.*;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-class AuctionServiceTest {
+class   AuctionServiceTest {
     private Auction mockAuction;
     private Bidder mockBidder;
 

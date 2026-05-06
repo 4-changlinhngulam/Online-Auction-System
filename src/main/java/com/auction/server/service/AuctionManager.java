@@ -11,12 +11,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.auction.server.dao.AuctionDAO;
+import com.auction.server.dao.BidTransactionDAO;
 import com.auction.shared.exception.AuctionClosedException;
 import com.auction.shared.exception.InvalidBidException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.BidObserver;
+import com.auction.shared.model.entity.BidTransaction;
 import com.auction.shared.model.entity.Bidder;
 import com.auction.shared.model.enums.AuctionStatus;
+import com.auction.shared.protocol.Response;
 
 
 /** Singleton – Quản lý toàn bộ phiên đấu giá. Xử lý concurrency + Observer notify. */
@@ -156,6 +159,63 @@ public class AuctionManager {
         }
     }
 
-    
+    /**
+     * Xử lý một lượt đặt giá mới (Real-time).
+     * BẮT BUỘC dùng 'synchronized' để chặn nhiều người đặt giá cùng lúc.
+     */
+    public synchronized Response processNewBid(String auctionId, String bidderId, double bidAmount) {
+
+        // 1. Lấy thông tin phiên đấu giá từ RAM
+        Auction auction = activeAuctions.get(auctionId);
+
+        // Kiểm tra phiên đấu giá có tồn tại trên RAM không
+        if (auction == null) {
+            return new Response(false, "Phiên đấu giá không tồn tại hoặc đã kết thúc.", null);
+        }
+
+        // Kiểm tra trạng thái phải là OPEN
+        if (auction.getStatus() != AuctionStatus.OPEN) {
+            return new Response(false, "Phiên đấu giá hiện không mở.", null);
+        }
+
+        // 2. Kiểm tra giá đặt: Phải cao hơn giá cao nhất hiện tại
+        if (bidAmount <= auction.getCurrentPrice()) {
+            return new Response(false, "Giá đặt phải lớn hơn giá hiện tại (" + auction.getCurrentPrice() + ").", null);
+        }
+
+        try {
+            // 3. Cập nhật thông tin TRÊN RAM ngay lập tức
+            auction.setCurrentPrice(bidAmount);
+
+            // Cập nhật người thắng tạm thời
+            Bidder tempWinner = new Bidder();
+            tempWinner.setId(bidderId);
+            auction.setCurrentWinner(tempWinner);
+
+            // 4. Ghi sổ TRONG DATABASE
+            BidTransaction transaction = new BidTransaction();
+            transaction.setAuctionId(auctionId);
+            transaction.setBidderId(bidderId);
+            transaction.setAmount(bidAmount);
+
+            BidTransactionDAO bidDao = new BidTransactionDAO();
+            boolean isSaved = bidDao.save(transaction);
+
+            if (!isSaved) {
+                return new Response(false, "Lỗi khi ghi nhận giao dịch vào cơ sở dữ liệu.", null);
+            }
+
+            // 5. Cập nhật giá mới của phiên đấu giá vào bảng 'auctions'
+            auctionDAO.update(auction);
+
+            notifyObservers(auction);
+
+            return new Response(true, "Đặt giá thành công!", null);
+
+        } catch (Exception e) {
+            System.err.println("Lỗi Server khi xử lý Bid: " + e.getMessage());
+            return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
+        }
+    }
 }
 

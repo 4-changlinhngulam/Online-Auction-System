@@ -1,15 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<!--
-  Màn hình: product-form
-  TODO: Thiết kế giao diện bằng SceneBuilder và liên kết với Controller tương ứng.
--->
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.auction.client.controller.TODO_CONTROLLER"
-      spacing="10" style="-fx-padding: 20;">
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.ProductFormController">
 
-    <Label text="TODO: Thiết kế màn hình product-form" />
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Button text="← Quay lại" styleClass="nav-btn" onAction="#handleBack"/>
+            <Label text="Thêm sản phẩm" styleClass="navbar-brand"/>
+        </HBox>
+    </top>
 
-</VBox>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER">
+            <content>
+                <VBox alignment="CENTER" spacing="14" styleClass="glass-panel"
+                      style="-fx-margin: 40px;">
+                    <padding><Insets top="30" right="60" bottom="30" left="60"/></padding>
+
+                    <Label text="THÔNG TIN SẢN PHẨM" styleClass="title-main"
+                           alignment="CENTER" maxWidth="Infinity"/>
+
+                    <Label text="TÊN SẢN PHẨM" styleClass="label" maxWidth="Infinity"/>
+                    <TextField fx:id="nameField"
+                               promptText="Nhập tên sản phẩm"
+                               styleClass="input-field" maxWidth="Infinity"/>
+
+                    <Label text="MÔ TẢ" styleClass="label" maxWidth="Infinity"/>
+                    <TextArea fx:id="descField"
+                              promptText="Mô tả sản phẩm..."
+                              prefHeight="100"
+                              styleClass="input-field"
+                              maxWidth="Infinity"/>
+
+                    <Label text="DANH MỤC" styleClass="label" maxWidth="Infinity"/>
+                    <ComboBox fx:id="categoryCombo"
+                              maxWidth="Infinity"
+                              styleClass="input-field"/>
+
+                    <Label text="GIÁ KHỞI ĐIỂM (VND)" styleClass="label"
+                           maxWidth="Infinity"/>
+                    <TextField fx:id="priceField"
+                               promptText="Nhập giá khởi điểm"
+                               styleClass="input-field" maxWidth="Infinity"/>
+
+                    <Region prefHeight="10"/>
+
+                    <Button text="LƯU SẢN PHẨM"
+                            styleClass="button-signin"
+                            onAction="#handleSave"
+                            maxWidth="Infinity"/>
+
+                    <Button text="HỦY"
+                            styleClass="button-outline"
+                            onAction="#handleBack"
+                            maxWidth="Infinity"/>
+
+                    <Label fx:id="errorLabel" text=""
+                           alignment="CENTER" maxWidth="Infinity"
+                           style="-fx-text-fill: #ff6b6b;"/>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

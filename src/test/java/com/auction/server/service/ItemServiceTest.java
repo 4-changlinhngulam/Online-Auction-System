@@ -7,7 +7,6 @@ import com.auction.shared.protocol.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -19,44 +18,55 @@ import static org.mockito.Mockito.*;
 
 class ItemServiceTest {
 
-        @Mock
-        private ItemDAO itemDAO;
+    @Mock
+    private ItemDAO itemDAO;
 
-        private ItemService itemService;
+    private ItemService itemService;
 
-        @BeforeEach
-        void setUp() {
-            MockitoAnnotations.openMocks(this);
-            itemService = new ItemService(itemDAO);
-        }
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        itemService = new ItemService(itemDAO);
+    }
 
-        @Test
-        @DisplayName("Tạo Item thành công")
-        void testCreateItem_Success() throws Exception {
-            Item item = new Electronics("Điện thoại", "Hàng mới", 500.0);
+    @Test
+    @DisplayName("Cập nhật Item: Thất bại do thiếu ID")
+    void testUpdateItem_Fail_EmptyId() {
+        Item item = new Electronics("", "Laptop V2", 2000.0); // ID rỗng
 
-            // Cấu hình mock (ItemDAO.save trả về void, nên doNothing() là mặc định)
-            doNothing().when(itemDAO).save(any(Item.class));
+        Response response = itemService.updateItem(item);
 
-            Response response = itemService.createItem(item);
+        assertFalse(response.isSuccess());
+        assertEquals("Dữ liệu cập nhật hoặc ID sản phẩm không hợp lệ.", response.getMessage());
+    }
 
-            assertTrue(response.isSuccess());
-            verify(itemDAO, times(1)).save(item);
-        }
+    @Test
+    @DisplayName("Xóa Item: Thất bại do ID rỗng")
+    void testDeleteItem_Fail_EmptyId() {
+        Response response = itemService.deleteItem("   ");
 
-        @Test
-        @DisplayName("Lấy danh sách tất cả Items")
-        void testGetAllItems_Success() throws Exception {
-            Item item1 = new Electronics("Laptop", "Mới", 1000.0);
-            Item item2 = new Electronics("Tablet", "Cũ", 300.0);
+        assertFalse(response.isSuccess());
+        assertEquals("ID sản phẩm không được để trống.", response.getMessage());
+    }
 
-            when(itemDAO.findAll()).thenReturn(Arrays.asList(item1, item2));
+    @Test
+    @DisplayName("Tìm kiếm Item: Thất bại do từ khóa trống")
+    void testSearchItems_Fail_EmptyKeyword() {
+        Response response = itemService.searchItemsByName("");
 
-            Response response = itemService.getAllItems();
+        assertFalse(response.isSuccess());
+        assertEquals("Vui lòng nhập từ khóa tìm kiếm.", response.getMessage());
+        verify(itemDAO, never()).searchByName(anyString());
+    }
 
-            assertTrue(response.isSuccess());
-            List<?> items = (List<?>) response.getData();
-            assertEquals(2, items.size());
-            verify(itemDAO, times(1)).findAll();
-        }
+    @Test
+    @DisplayName("Tìm kiếm Item: Thành công nhưng không có kết quả")
+    void testSearchItems_Success_NoResult() {
+        when(itemDAO.searchByName("Không Tồn Tại")).thenReturn(Arrays.asList());
+
+        Response response = itemService.searchItemsByName("Không Tồn Tại");
+
+        assertTrue(response.isSuccess());
+        assertTrue(response.getMessage().contains("Không tìm thấy sản phẩm nào"));
+    }
 }

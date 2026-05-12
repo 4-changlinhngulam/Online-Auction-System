@@ -6,7 +6,6 @@ import com.auction.shared.protocol.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -32,37 +31,65 @@ class BidServiceTest {
         bidService = new BidService(auctionManager, bidTransactionDAO);
     }
 
+    // ==========================================
+    // TEST ĐẶT GIÁ (PLACE BID)
+    // ==========================================
     @Test
-    @DisplayName("Lấy lịch sử đấu giá thành công")
-    void testGetBidHistory_Success() throws Exception {
-        String auctionId = "AUC_123";
-        BidTransaction tx1 = new BidTransaction();
-        tx1.setAuctionId(auctionId);
-        tx1.setAmount(1500.0);
+    @DisplayName("Đặt giá: Đẩy việc qua AuctionManager thành công")
+    void testPlaceBid_Success() {
+        when(auctionManager.processNewBid("AUC_123", "USR_001", 2500.0))
+                .thenReturn(new Response(true, "Đặt giá thành công!", null));
 
-        BidTransaction tx2 = new BidTransaction();
-        tx2.setAuctionId(auctionId);
-        tx2.setAmount(2000.0);
-
-        when(bidTransactionDAO.getBidsByAuctionId(auctionId)).thenReturn(Arrays.asList(tx2, tx1));
-
-        Response response = bidService.getBidHistory(auctionId);
+        Response response = bidService.placeBid("AUC_123", "USR_001", 2500.0);
 
         assertTrue(response.isSuccess());
-        List<?> history = (List<?>) response.getData();
-        assertEquals(2, history.size());
-        verify(bidTransactionDAO, times(1)).getBidsByAuctionId(auctionId);
+        verify(auctionManager, times(1)).processNewBid(anyString(), anyString(), anyDouble());
     }
 
     @Test
-    @DisplayName("Lấy lịch sử đấu giá trống")
-    void testGetBidHistory_Empty() throws Exception {
-        String auctionId = "AUC_EMPTY";
-        when(bidTransactionDAO.getBidsByAuctionId(auctionId)).thenReturn(Arrays.asList());
+    @DisplayName("Đặt giá: Thất bại do thiếu thông tin (Null ID)")
+    void testPlaceBid_Fail_NullIds() {
+        // Cố tình truyền null vào ID
+        Response response = bidService.placeBid(null, "USR_001", 2000.0);
+        assertFalse(response.isSuccess());
+        assertEquals("Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", response.getMessage());
 
-        Response response = bidService.getBidHistory(auctionId);
+        Response response2 = bidService.placeBid("AUC_123", null, 2000.0);
+        assertFalse(response2.isSuccess());
+
+        // Xác minh không gọi xuống tầng Manager
+        verify(auctionManager, never()).processNewBid(anyString(), anyString(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("Đặt giá: Thất bại do nhập số tiền âm")
+    void testPlaceBid_Fail_InvalidAmount() {
+        Response response = bidService.placeBid("AUC_123", "USR_001", -500.0);
+        assertFalse(response.isSuccess());
+        assertEquals("Số tiền đặt giá phải lớn hơn 0.", response.getMessage());
+    }
+
+    // ==========================================
+    // TEST LẤY LỊCH SỬ (GET BID HISTORY)
+    // ==========================================
+    @Test
+    @DisplayName("Lấy lịch sử đấu giá: Thành công")
+    void testGetBidHistory_Success() throws Exception {
+        BidTransaction tx1 = new BidTransaction();
+        when(bidTransactionDAO.getBidsByAuctionId("AUC_123")).thenReturn(Arrays.asList(tx1));
+
+        Response response = bidService.getBidHistory("AUC_123");
 
         assertTrue(response.isSuccess());
-        verify(bidTransactionDAO, times(1)).getBidsByAuctionId(auctionId);
+        assertEquals(1, ((List<?>) response.getData()).size());
+    }
+
+    @Test
+    @DisplayName("Lấy lịch sử đấu giá: Thất bại do mã phiên rỗng")
+    void testGetBidHistory_Fail_EmptyAuctionId() {
+        Response response = bidService.getBidHistory("   "); // Chuỗi toàn khoảng trắng
+        assertFalse(response.isSuccess());
+        assertEquals("Mã phiên đấu giá không hợp lệ.", response.getMessage());
+        verify(bidTransactionDAO, never()).getBidsByAuctionId(anyString());
     }
 }

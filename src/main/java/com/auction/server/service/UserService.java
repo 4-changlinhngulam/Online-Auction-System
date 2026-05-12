@@ -19,6 +19,10 @@ public class UserService {
         this.userDAO = new UserDAO();
     }
 
+    public UserService(UserDAO userDAO) {
+        this.userDAO = userDAO;
+    }
+
     /**
      * Xử lý đăng nhập
      */

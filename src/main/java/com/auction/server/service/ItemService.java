@@ -16,6 +16,8 @@ public class ItemService {
         this.itemDAO = new ItemDAO();
     }
 
+    public ItemService(ItemDAO itemDAO) {this.itemDAO = itemDAO;}
+
     // Xử lý yêu cầu tạo sản phẩm mới.
     public Response createItem(Item newItem) {
         if (newItem == null) {

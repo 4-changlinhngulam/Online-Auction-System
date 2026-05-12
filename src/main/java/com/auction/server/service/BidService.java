@@ -15,6 +15,11 @@ public class BidService {
         this.auctionManager = auctionManager;
     }
 
+    public BidService(AuctionManager auctionManager, BidTransactionDAO bidDAO) {
+        this.auctionManager = auctionManager;
+        this.bidDAO = bidDAO;
+    }
+
     public Response placeBid(String auctionId, String bidderId, double amount) {
         // Validate dữ liệu sơ bộ
         if (amount <= 0) {

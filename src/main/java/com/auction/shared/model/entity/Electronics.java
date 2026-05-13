@@ -10,8 +10,12 @@ public class Electronics extends Item {
         super();
     }
 
-    public int getWarrantyMonths() { return warrantyMonths; }
-    public void setWarrantyMonths(int warrantyMonths) { this.warrantyMonths = warrantyMonths; }
+    public int getWarrantyMonths() {
+        return warrantyMonths;
+    }
+    public void setWarrantyMonths(int warrantyMonths) {
+        this.warrantyMonths = warrantyMonths;
+    }
 
     @Override
     public void printInfo() {

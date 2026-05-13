@@ -1,16 +1,16 @@
 package com.auction.shared.model.entity;
 
-import com.auction.shared.model.enums.*;
+import com.auction.shared.model.enums.AuctionStatus;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 1. Đại diện cho một phiên đấu giá cụ thể đang diễn ra, bao bọc lấy một `Item` (sản phẩm).
  * 2. Chịu trách nhiệm quản lý thời gian (startTime, endTime) và trạng thái của phiên (OPEN, RUNNING, FINISHED, PAID, CANCELED).
  * 3. Giữ tham chiếu đến người thắng cuộc hiện tại (`currentWinner`) và mức giá cao nhất (`currentPrice`).
- * 4. Hàm `handleNewBid` được đánh dấu `synchronized` để đảm bảo an toàn luồng (Thread-safe) trong trường hợp nhiều người cùng lúc đặt giá (Race Condition).
+ * 4. Hàm `handleNewBid` được đánh dấu `synchronized` để đảm bảo an toàn luồng.
  */
 public class Auction extends Entity {
     private Item item;
@@ -25,16 +25,21 @@ public class Auction extends Entity {
 
     private List<BidObserver> observers = new ArrayList<>();
 
-    public void addObserver(BidObserver obs) { observers.add(obs); }
+    public Auction() {
+        // Constructor mặc định cần có comment để tránh lỗi EmptyBlock của Checkstyle
+    }
+
+    public void addObserver(BidObserver obs) {
+        observers.add(obs);
+    }
 
     private void notifyObservers() {
-        for(BidObserver obs : observers) {
+        for (BidObserver obs : observers) {
             obs.update(this.item, this.currentPrice, this.currentWinner.getId());
         }
     }
-    
-    public Auction() {}
-// Getter/Setter
+
+    // Getter/Setter
     public Item getItem() {
         return item;
     }
@@ -89,13 +94,13 @@ public class Auction extends Entity {
      * được phép chạy vào hàm này cho cùng một đối tượng Auction.
      */
     public synchronized boolean handleNewBid(Bidder bidder, double bidAmount) {
-        //Kiểm tra trạng thái phiên (Chỉ cho phép bid khi đang RUNNING)
+        // Kiểm tra trạng thái phiên (Chỉ cho phép bid khi đang RUNNING)
         if (!AuctionStatus.RUNNING.equals(this.status)) {
             System.out.println("Phiên đấu giá không ở trạng thái mở!");
             return false;
         }
 
-        //Kiểm tra thời gian (Đề phòng độ trễ mạng khiến bid tới sau khi đã đóng)
+        // Kiểm tra thời gian (Đề phòng độ trễ mạng khiến bid tới sau khi đã đóng)
         if (LocalDateTime.now().isAfter(endTime)) {
             System.out.println("Phiên đấu giá đã kết thúc!");
             this.status = AuctionStatus.FINISHED;
@@ -107,11 +112,11 @@ public class Auction extends Entity {
             return false;
         }
 
-        //Cập nhật thông tin người thắng và giá mới
+        // Cập nhật thông tin người thắng và giá mới
         this.currentPrice = bidAmount;
         this.currentWinner = bidder;
 
-        //Tạo và lưu Transaction vào lịch sử
+        // Tạo và lưu Transaction vào lịch sử
         BidTransaction transaction = new BidTransaction();
         transaction.setBidderId(bidder.getId());
         transaction.setAuctionId(this.getId());
@@ -128,14 +133,31 @@ public class Auction extends Entity {
     }
 
     // Đóng mở phiên giao dịch
-    public void startAuction() {}
-    public void closeAuction() {}
+    public void startAuction() {
+        // TODO: Viết logic khi bắt đầu phiên ở đây
+    }
 
-    public String getAuctionId() { return this.getId(); }
+    public void closeAuction() {
+        // TODO: Viết logic khi đóng phiên ở đây
+    }
 
-    public double getCurrentPrice() { return currentPrice; }
-    public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
+    public String getAuctionId() {
+        return this.getId();
+    }
 
-    public AuctionStatus getStatus() { return status; }
-    public void setStatus(AuctionStatus status) { this.status = status; }
+    public double getCurrentPrice() {
+        return currentPrice;
+    }
+
+    public void setCurrentPrice(double currentPrice) {
+        this.currentPrice = currentPrice;
+    }
+
+    public AuctionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AuctionStatus status) {
+        this.status = status;
+    }
 }

@@ -1,15 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<!--
-  Màn hình: auction-detail
-  TODO: Thiết kế giao diện bằng SceneBuilder và liên kết với Controller tương ứng.
--->
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.auction.client.controller.TODO_CONTROLLER"
-      spacing="10" style="-fx-padding: 20;">
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.AuctionDetailController">
 
-    <Label text="TODO: Thiết kế màn hình auction-detail" />
+    <!-- NAVBAR -->
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Button text="← Quay lại" styleClass="nav-btn" onAction="#handleBack"/>
+            <Label text="Chi tiết phiên đấu giá" styleClass="navbar-brand"/>
+        </HBox>
+    </top>
 
-</VBox>
+    <center>
+        <HBox spacing="20">
+            <padding><Insets top="20" right="30" bottom="20" left="30"/></padding>
+
+            <!-- Cột trái: thông tin sản phẩm -->
+            <VBox spacing="14" prefWidth="400" styleClass="glass-panel">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+                <Label text="THÔNG TIN SẢN PHẨM" styleClass="title-main"/>
+                <Label fx:id="itemNameLabel" text="Tên sản phẩm" styleClass="label"/>
+                <Label fx:id="itemDescLabel" text="Mô tả" wrapText="true" styleClass="label-description"/>
+
+                <Separator/>
+
+                <Label text="GIÁ HIỆN TẠI" styleClass="label"/>
+                <Label fx:id="currentPriceLabel" text="0 VND"
+                       style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #e65100;"/>
+
+                <Label text="THỜI GIAN CÒN LẠI" styleClass="label"/>
+                <Label fx:id="timeRemainingLabel" text="--:--:--"
+                       style="-fx-font-size: 20px; -fx-text-fill: white;"/>
+
+                <Label fx:id="statusLabel" text="ĐANG CHẠY"
+                       style="-fx-text-fill: #00ff00; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- Cột phải: đặt giá + lịch sử -->
+            <VBox spacing="14" prefWidth="400" styleClass="glass-panel">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+                <Label text="ĐẶT GIÁ" styleClass="title-main"/>
+
+                <Label text="Nhập giá của bạn (VND)" styleClass="label"/>
+                <TextField fx:id="bidAmountField"
+                           promptText="Nhập số tiền..."
+                           styleClass="input-field"/>
+
+                <Button fx:id="placeBidButton"
+                        text="ĐẶT GIÁ NGAY"
+                        styleClass="button-signin"
+                        onAction="#handlePlaceBid"
+                        maxWidth="Infinity"/>
+
+                <Label fx:id="bidErrorLabel" text=""
+                       style="-fx-text-fill: #ff6b6b;"/>
+
+                <Separator/>
+
+                <Label text="LỊCH SỬ ĐẶT GIÁ" styleClass="label"/>
+                <ListView fx:id="bidHistoryList" prefHeight="200"/>
+
+            </VBox>
+        </HBox>
+    </center>
+
+</BorderPane>

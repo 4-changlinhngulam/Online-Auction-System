@@ -7,7 +7,7 @@ import java.util.List;
 
 public class BidService {
     private final BidTransactionDAO bidDAO;
-    // Inject thêm AuctionManager để điều phối các tác vụ "nóng"
+    // Inject AuctionManager
     private final AuctionManager auctionManager;
 
     public BidService(AuctionManager auctionManager) {
@@ -29,19 +29,17 @@ public class BidService {
             return new Response(false, "Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", null);
         }
 
-        // Chuyển việc khó cho "Trưởng phòng" AuctionManager lo (check giá, lưu DB, notify)
-        // Lưu ý: Bên trong hàm xử lý của AuctionManager, bạn sẽ gọi bidDAO.save(...) để chốt giao dịch
+        // Bên trong hàm xử lý của AuctionManager, gọi bidDAO.save(...) để chốt giao dịch
         return auctionManager.processNewBid(auctionId, bidderId, amount);
     }
 
-    // --- NHÓM NGUỘI ---
     public Response getBidHistory(String auctionId) {
         if (auctionId == null || auctionId.trim().isEmpty()) {
             return new Response(false, "Mã phiên đấu giá không hợp lệ.", null);
         }
 
         try {
-            // Gọi thủ kho DAO lấy dữ liệu
+            // Gọi DAO lấy dữ liệu
             List<BidTransaction> history = bidDAO.getBidsByAuctionId(auctionId);
             return new Response(true, "Lấy lịch sử thành công.", history);
         } catch (Exception e) {

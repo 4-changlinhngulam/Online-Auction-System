@@ -1,15 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<!--
-  Màn hình: product-manage
-  TODO: Thiết kế giao diện bằng SceneBuilder và liên kết với Controller tương ứng.
--->
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.auction.client.controller.TODO_CONTROLLER"
-      spacing="10" style="-fx-padding: 20;">
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.ProductManageController">
 
-    <Label text="TODO: Thiết kế màn hình product-manage" />
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Button text="← Quay lại" styleClass="nav-btn" onAction="#handleBack"/>
+            <Label text="Sản phẩm của tôi" styleClass="navbar-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="+ Thêm sản phẩm" styleClass="nav-btn-accent" onAction="#handleAddProduct"/>
+        </HBox>
+    </top>
 
-</VBox>
+    <center>
+        <VBox spacing="16">
+            <padding><Insets top="20" right="30" bottom="20" left="30"/></padding>
+
+            <TableView fx:id="productTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colProductName" text="Tên sản phẩm" prefWidth="250"/>
+                    <TableColumn fx:id="colCategory" text="Danh mục" prefWidth="150"/>
+                    <TableColumn fx:id="colStartPrice" text="Giá khởi điểm" prefWidth="150"/>
+                    <TableColumn fx:id="colProductAction" text="Thao tác" prefWidth="200"/>
+                </columns>
+            </TableView>
+
+            <HBox spacing="12">
+                <Button fx:id="editButton" text="Sửa"
+                        styleClass="button-signin"
+                        onAction="#handleEdit"/>
+                <Button fx:id="deleteButton" text="Xóa"
+                        styleClass="button-outline"
+                        onAction="#handleDelete"/>
+                <Button fx:id="createAuctionBtn"
+                        text="Tạo phiên đấu giá"
+                        styleClass="nav-btn-accent"
+                        onAction="#handleCreateAuction"/>
+            </HBox>
+
+            <Label fx:id="messageLabel" text=""
+                   style="-fx-text-fill: #ff6b6b;"/>
+        </VBox>
+    </center>
+
+</BorderPane>

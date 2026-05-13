@@ -1,16 +1,22 @@
 package com.auction.server.dao;
 
+import com.auction.server.service.ItemFactory;
+import com.auction.shared.exception.DataPersistenceException;
+import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.Bidder;
 import com.auction.shared.model.entity.Item;
 import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
-import com.auction.shared.exception.DataPersistenceException;
-import com.auction.shared.exception.EntityNotFoundException;
-import com.auction.server.service.ItemFactory;
 import com.auction.shared.model.enums.ItemType;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +25,6 @@ import java.util.List;
  */
 public class AuctionDAO {
 
-
     // 1. HÀM THÊM MỚI (SAVE)
 
     public void save(Auction auction) throws DataPersistenceException {
@@ -27,7 +32,9 @@ public class AuctionDAO {
             throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
-        String sql = "INSERT INTO auctions (id, item_id, current_price, current_winner_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO auctions " +
+                "(id, item_id, current_price, current_winner_id, start_time, end_time, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -35,7 +42,9 @@ public class AuctionDAO {
             pstmt.setString(1, auction.getId());
 
             // Xử lý Khóa ngoại: Lấy ID của Item
-            if (auction.getItem() == null) throw new IllegalArgumentException("Phiên đấu giá phải có Item đính kèm!");
+            if (auction.getItem() == null) {
+                throw new IllegalArgumentException("Phiên đấu giá phải có Item đính kèm!");
+            }
             pstmt.setString(2, auction.getItem().getId());
 
             pstmt.setDouble(3, auction.getCurrentPrice());
@@ -65,7 +74,6 @@ public class AuctionDAO {
         }
     }
 
-
     // 2. HÀM CẬP NHẬT (UPDATE)
 
     public void update(Auction auction) throws DataPersistenceException, EntityNotFoundException {
@@ -73,7 +81,9 @@ public class AuctionDAO {
             throw new IllegalArgumentException("Auction và ID không được phép null");
         }
 
-        String sql = "UPDATE auctions SET item_id = ?, current_price = ?, current_winner_id = ?, start_time = ?, end_time = ?, status = ? WHERE id = ?";
+        String sql = "UPDATE auctions " +
+                "SET item_id = ?, current_price = ?, current_winner_id = ?, start_time = ?, end_time = ?, status = ? " +
+                "WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -102,7 +112,6 @@ public class AuctionDAO {
             throw new DataPersistenceException("Lỗi khi cập nhật Auction trên Database", e);
         }
     }
-
 
     // 3. LẤY TẤT CẢ PHIÊN ĐẤU GIÁ (FIND ALL)
 
@@ -160,7 +169,6 @@ public class AuctionDAO {
         return auctions;
     }
 
-
     // 4. TÌM THEO ID (FIND BY ID)
 
     public Auction findById(String id) throws DataPersistenceException, EntityNotFoundException {
@@ -169,7 +177,6 @@ public class AuctionDAO {
                 .findFirst()
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy phiên đấu giá có ID: " + id));
     }
-
 
     // 5. XÓA (DELETE)
 
@@ -191,7 +198,6 @@ public class AuctionDAO {
         }
     }
 
-
     // 6. LẤY CÁC PHIÊN ĐẤU GIÁ MỞ (getOpenAuctions)
     /**
      * Lấy danh sách tất cả các phiên đấu giá đang ở trạng thái OPEN.
@@ -200,12 +206,12 @@ public class AuctionDAO {
     public List<Auction> getOpenAuctions() {
         List<Auction> openAuctions = new ArrayList<>();
         // Truy vấn kết nối bảng auctions với bảng items (để lấy thông tin món đồ) và bảng users (nếu có người đang thắng)
-        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, " +
-                "u.username as winner_username " +
-                "FROM auctions a " +
-                "JOIN items i ON a.item_id = i.id " +
-                "LEFT JOIN users u ON a.current_winner_id = u.id " +
-                "WHERE a.status = 'OPEN'";
+        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username "
+                + "FROM auctions a "
+                + "JOIN items i ON a.item_id = i.id "
+                + "LEFT JOIN users u ON a.current_winner_id = u.id "
+                + "WHERE a.status = 'OPEN'";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);

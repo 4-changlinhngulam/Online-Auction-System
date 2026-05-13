@@ -1,2 +1,7 @@
 package com.auction.shared.exception;
-public class AuthenticationException extends Exception { public AuthenticationException(String msg){super(msg);} }
+public class AuthenticationException extends Exception {
+    public AuthenticationException(String msg) {
+        super(msg);
+    }
+}
+

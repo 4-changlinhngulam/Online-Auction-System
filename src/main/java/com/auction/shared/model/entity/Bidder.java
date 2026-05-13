@@ -16,7 +16,10 @@ public class Bidder extends User implements BidObserver {
     private double maxAutoBidAmount;
     private boolean isAutoBidEnabled;
 
-    public Bidder(String username, String password, String email) { super(username, password, UserRole.BIDDER, email); }
+    public Bidder(String username, String password, String email) {
+        super(username, password, UserRole.BIDDER, email);
+    }
+
     public Bidder() {
         super();
     }

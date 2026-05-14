@@ -1,45 +1,77 @@
 package com.auction.shared.model.entity;
 
 import com.auction.shared.model.enums.AuctionStatus;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 1. Đại diện cho một phiên đấu giá cụ thể đang diễn ra, bao bọc lấy một `Item` (sản phẩm).
- * 2. Chịu trách nhiệm quản lý thời gian (startTime, endTime) và trạng thái của phiên (OPEN, RUNNING, FINISHED, PAID, CANCELED).
- * 3. Giữ tham chiếu đến người thắng cuộc hiện tại (`currentWinner`) và mức giá cao nhất (`currentPrice`).
- * 4. Hàm `handleNewBid` được đánh dấu `synchronized` để đảm bảo an toàn luồng.
- */
 public class Auction extends Entity {
     private Item item;
     private double currentPrice;
     private Bidder currentWinner;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private AuctionStatus status; // OPEN, RUNNING, FINISHED, PAID, CANCELED
-
-    // Khởi tạo ArrayList để lưu lịch sử không bị lỗi null
+    private AuctionStatus status;
     private List<BidTransaction> bidHistory = new ArrayList<>();
-
     private List<BidObserver> observers = new ArrayList<>();
 
     public Auction() {
-        // Constructor mặc định cần có comment để tránh lỗi EmptyBlock của Checkstyle
     }
 
     public void addObserver(BidObserver obs) {
-        observers.add(obs);
-    }
-
-    private void notifyObservers() {
-        for (BidObserver obs : observers) {
-            obs.update(this.item, this.currentPrice, this.currentWinner.getId());
+        if (obs != null && !observers.contains(obs)) {
+            observers.add(obs);
         }
     }
 
-    // Getter/Setter
+    private void notifyObservers() {
+        String winnerId = (currentWinner != null) ? currentWinner.getId() : "";
+        for (BidObserver obs : observers) {
+            obs.update(this.item, this.currentPrice, winnerId);
+        }
+    }
+
+    public synchronized boolean handleNewBid(Bidder bidder, double bidAmount) {
+        if (status != AuctionStatus.RUNNING) {
+            return false;
+        }
+
+        if (endTime != null && LocalDateTime.now().isAfter(endTime)) {
+            this.status = AuctionStatus.FINISHED;
+            return false;
+        }
+
+        if (bidAmount <= currentPrice) {
+            return false;
+        }
+
+        this.currentPrice = bidAmount;
+        this.currentWinner = bidder;
+
+        BidTransaction transaction = new BidTransaction();
+        transaction.setBidderId(bidder.getId());
+        transaction.setAuctionId(this.getId());
+        transaction.setAmount(bidAmount);
+        transaction.setTimestamp(LocalDateTime.now());
+        bidHistory.add(transaction);
+
+        notifyObservers();
+        return true;
+    }
+
+    public void startAuction() {
+        if (this.status == AuctionStatus.OPEN) {
+            this.status = AuctionStatus.RUNNING;
+            this.startTime = LocalDateTime.now();
+        }
+    }
+
+    public void closeAuction() {
+        if (this.status == AuctionStatus.RUNNING) {
+            this.status = AuctionStatus.FINISHED;
+        }
+    }
+
     public Item getItem() {
         return item;
     }
@@ -78,71 +110,6 @@ public class Auction extends Entity {
 
     public void setBidHistory(List<BidTransaction> bidHistory) {
         this.bidHistory = bidHistory;
-    }
-
-    public List<BidObserver> getObservers() {
-        return observers;
-    }
-
-    public void setObservers(List<BidObserver> observers) {
-        this.observers = observers;
-    }
-
-    /**
-     * Hàm xử lý đặt giá đồng thời.
-     * Từ khóa 'synchronized' đảm bảo tại 1 thời điểm chỉ có 1 thread (1 lượt bid)
-     * được phép chạy vào hàm này cho cùng một đối tượng Auction.
-     */
-    public synchronized boolean handleNewBid(Bidder bidder, double bidAmount) {
-        // Kiểm tra trạng thái phiên (Chỉ cho phép bid khi đang RUNNING)
-        if (!AuctionStatus.RUNNING.equals(this.status)) {
-            System.out.println("Phiên đấu giá không ở trạng thái mở!");
-            return false;
-        }
-
-        // Kiểm tra thời gian (Đề phòng độ trễ mạng khiến bid tới sau khi đã đóng)
-        if (LocalDateTime.now().isAfter(endTime)) {
-            System.out.println("Phiên đấu giá đã kết thúc!");
-            this.status = AuctionStatus.FINISHED;
-            return false;
-        }
-
-        if (bidAmount <= currentPrice) {
-            System.out.println(" Giá đặt (" + bidAmount + ") phải lớn hơn giá hiện tại (" + currentPrice + ")!");
-            return false;
-        }
-
-        // Cập nhật thông tin người thắng và giá mới
-        this.currentPrice = bidAmount;
-        this.currentWinner = bidder;
-
-        // Tạo và lưu Transaction vào lịch sử
-        BidTransaction transaction = new BidTransaction();
-        transaction.setBidderId(bidder.getId());
-        transaction.setAuctionId(this.getId());
-        transaction.setAmount(bidAmount);
-        transaction.setTimestamp(LocalDateTime.now());
-
-        bidHistory.add(transaction);
-
-        System.out.println(bidder.getUsername() + " đặt giá thành công: $" + bidAmount);
-
-        notifyObservers();
-
-        return true;
-    }
-
-    // Đóng mở phiên giao dịch
-    public void startAuction() {
-        // TODO: Viết logic khi bắt đầu phiên ở đây
-    }
-
-    public void closeAuction() {
-        // TODO: Viết logic khi đóng phiên ở đây
-    }
-
-    public String getAuctionId() {
-        return this.getId();
     }
 
     public double getCurrentPrice() {

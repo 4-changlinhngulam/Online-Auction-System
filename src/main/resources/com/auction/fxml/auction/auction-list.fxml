@@ -1,15 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<!--
-  Màn hình: auction-list
-  TODO: Thiết kế giao diện bằng SceneBuilder và liên kết với Controller tương ứng.
--->
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.auction.client.controller.TODO_CONTROLLER"
-      spacing="10" style="-fx-padding: 20;">
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.AuctionListController">
 
-    <Label text="TODO: Thiết kế màn hình auction-list" />
+    <!-- NAVBAR -->
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Label text="🏆 Đấu Giá Trực Tuyến" styleClass="navbar-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Trang chủ" styleClass="nav-btn" onAction="#goToAuctionList"/>
+            <Button text="Sản phẩm của tôi" styleClass="nav-btn" onAction="#goToMyProducts"/>
+            <Button text="Tạo phiên đấu giá" styleClass="nav-btn-accent" onAction="#goToCreateAuction"/>
+            <Button text="Đăng xuất" styleClass="nav-btn" onAction="#handleLogout"/>
+        </HBox>
+    </top>
 
-</VBox>
+    <!-- NỘI DUNG CHÍNH -->
+    <center>
+        <VBox spacing="16">
+            <padding><Insets top="20" right="30" bottom="20" left="30"/></padding>
+
+            <!-- Thanh tìm kiếm + lọc -->
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <TextField fx:id="searchField"
+                           promptText="Tìm kiếm sản phẩm..."
+                           prefWidth="300"
+                           styleClass="input-field"/>
+                <ComboBox fx:id="statusFilter"
+                          promptText="Trạng thái"
+                          prefWidth="150"
+                          styleClass="input-field"/>
+                <Button text="Tìm kiếm"
+                        styleClass="button-signin"
+                        onAction="#handleSearch"/>
+                <Button text="Làm mới"
+                        styleClass="button-outline"
+                        onAction="#handleRefresh"/>
+            </HBox>
+
+            <!-- Bảng danh sách phiên đấu giá -->
+            <TableView fx:id="auctionTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colName" text="Tên sản phẩm" prefWidth="250"/>
+                    <TableColumn fx:id="colCurrentPrice" text="Giá hiện tại" prefWidth="150"/>
+                    <TableColumn fx:id="colStatus" text="Trạng thái" prefWidth="120"/>
+                    <TableColumn fx:id="colEndTime" text="Kết thúc lúc" prefWidth="180"/>
+                    <TableColumn fx:id="colAction" text="Thao tác" prefWidth="150"/>
+                </columns>
+            </TableView>
+
+            <!-- Label thông báo -->
+            <Label fx:id="messageLabel" text="" styleClass="label"/>
+
+        </VBox>
+    </center>
+
+</BorderPane>

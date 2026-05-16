@@ -1,6 +1,9 @@
 package com.auction.server.service;
 
-import com.auction.shared.model.entity.*;
+import com.auction.shared.model.entity.Art;
+import com.auction.shared.model.entity.Electronics;
+import com.auction.shared.model.entity.Item;
+import com.auction.shared.model.entity.Vehicle;
 import com.auction.shared.model.enums.ItemType;
 
 public class ItemFactory {

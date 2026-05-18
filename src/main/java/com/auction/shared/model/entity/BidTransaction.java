@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 /**
  * 1. Lớp BidTransaction có nhiệm vụ ghi lại dấu vết (log) của từng lượt đặt giá cụ thể.
- * 2. Lưu trữ thông tin chi tiết: Ai là người đặt (bidderId), đặt vào phiên nào (auctionId), mức giá bao nhiêu (amount), và chính xác thời điểm nào (timestamp).
+ * 2. Lưu trữ thông tin chi tiết
  * 3. Lớp này đáp ứng yêu cầu vẽ lại biểu đồ giá theo thời gian và lưu trữ lịch sử minh bạch cho hệ thống.
  * 4. Phương thức static `generateId()` giúp tạo ra chuỗi định danh duy nhất (có thể sử dụng UUID) cho mỗi phiên giao dịch.
  */
@@ -23,18 +23,38 @@ public class BidTransaction extends Entity {
         return java.util.UUID.randomUUID().toString();
     }
 
-    // Getters
-    public String getBidderId() { return bidderId; }
-    public void setBidderId(String bidderId) { this.bidderId = bidderId; }
+    // Getters và Setters
+    public String getBidderId() {
+        return bidderId;
+    }
 
-    public String getAuctionId() { return auctionId; }
-    public void setAuctionId(String auctionId) { this.auctionId = auctionId; }
+    public void setBidderId(String bidderId) {
+        this.bidderId = bidderId;
+    }
 
-    public double getAmount() { return amount; }
-    public void setAmount(double amount) { this.amount = amount; }
+    public String getAuctionId() {
+        return auctionId;
+    }
 
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    public void setAuctionId(String auctionId) {
+        this.auctionId = auctionId;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public void printInfo() {
         // In chi tiết giao dịch

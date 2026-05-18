@@ -9,12 +9,16 @@ import com.auction.shared.model.entity.Item;
 import com.auction.shared.model.entity.Vehicle;
 import com.auction.shared.model.enums.ItemType;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ItemDAO {
-
 
     // 1. THÊM MỚI SẢN PHẨM (SAVE)
 
@@ -52,7 +56,6 @@ public class ItemDAO {
         }
     }
 
-
     // 2. CẬP NHẬT SẢN PHẨM (UPDATE)
 
     public void update(Item item) throws DataPersistenceException, EntityNotFoundException {
@@ -69,9 +72,13 @@ public class ItemDAO {
             pstmt.setString(2, item.getDescription());
             pstmt.setDouble(3, item.getStartingPrice());
 
-            if (item instanceof Electronics) pstmt.setString(4, "ELECTRONICS");
-            else if (item instanceof Vehicle) pstmt.setString(4, "VEHICLE");
-            else pstmt.setString(4, "ART");
+            if (item instanceof Electronics) {
+                pstmt.setString(4, "ELECTRONICS");
+            } else if (item instanceof Vehicle) {
+                pstmt.setString(4, "VEHICLE");
+            } else {
+                pstmt.setString(4, "ART");
+            }
 
             pstmt.setString(5, item.getId());
 
@@ -83,7 +90,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi cập nhật Item", e);
         }
     }
-
 
     // 3. TÌM THEO ID (FIND BY ID)
 
@@ -106,7 +112,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi tìm Item theo ID", e);
         }
     }
-
 
     // 4. LẤY TẤT CẢ SẢN PHẨM (FIND ALL)
 
@@ -146,7 +151,7 @@ public class ItemDAO {
     }
 
     // 7. TÌM BẰNG TỪ KHÓA
-        
+
     public List<Item> searchByName(String keyword) {
         List<Item> resultList = new ArrayList<>();
         // Sử dụng LIKE để tìm kiếm chứa từ khóa, bất kể chữ hoa chữ thường

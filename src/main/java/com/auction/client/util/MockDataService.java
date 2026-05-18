@@ -1,9 +1,16 @@
 package com.auction.client.util;
 
-import com.auction.shared.model.entity.*;
+import com.auction.shared.model.entity.Art;
+import com.auction.shared.model.entity.Auction;
+import com.auction.shared.model.entity.BidTransaction;
+import com.auction.shared.model.entity.Bidder;
+import com.auction.shared.model.entity.Electronics;
+import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
+
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Dữ liệu giả để test GUI (JavaFX) độc lập, không cần kết nối Server.

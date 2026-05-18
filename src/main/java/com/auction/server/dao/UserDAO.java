@@ -8,12 +8,16 @@ import com.auction.shared.model.entity.Seller;
 import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.UserRole;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserDAO {
-
 
     // 1. THÊM MỚI USER (SAVE)
 
@@ -67,9 +71,13 @@ public class UserDAO {
             pstmt.setString(2, user.getPassword());
             pstmt.setString(3, user.getEmail());
 
-            if (user instanceof Admin) pstmt.setString(4, UserRole.ADMIN.name());
-            else if (user instanceof Seller) pstmt.setString(4, UserRole.SELLER.name());
-            else pstmt.setString(4, UserRole.BIDDER.name());
+            if (user instanceof Admin) {
+                pstmt.setString(4, UserRole.ADMIN.name());
+            } else if (user instanceof Seller) {
+                pstmt.setString(4, UserRole.SELLER.name());
+            } else {
+                pstmt.setString(4, UserRole.BIDDER.name());
+            }
 
             pstmt.setString(5, user.getId());
 
@@ -104,7 +112,6 @@ public class UserDAO {
         }
     }
 
-
     // 4. LẤY TOÀN BỘ USER (FIND ALL)
 
     public List<User> findAll() throws DataPersistenceException {
@@ -123,7 +130,6 @@ public class UserDAO {
         }
         return users;
     }
-
 
     // 5. XÓA USER BẰNG ID (DELETE by ID)
 
@@ -163,6 +169,7 @@ public class UserDAO {
             throw new DataPersistenceException("Lỗi khi tìm User theo Username", e);
         }
     }
+
     // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         String role = rs.getString("role");

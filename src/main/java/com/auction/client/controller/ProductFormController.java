@@ -1,10 +1,12 @@
 package com.auction.client.controller;
 
 import com.auction.client.util.SceneManager;
-import com.auction.shared.model.entity.*;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 
 public class ProductFormController {
 

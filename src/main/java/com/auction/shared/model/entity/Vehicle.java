@@ -10,8 +10,12 @@ public class Vehicle extends Item {
         super();
     }
 
-    public long getMileage() { return mileage; }
-    public void setMileage(long mileage) { this.mileage = mileage; }
+    public long getMileage() {
+        return mileage;
+    }
+    public void setMileage(long mileage) {
+        this.mileage = mileage;
+    }
 
     @Override
     public void printInfo() {

@@ -7,14 +7,15 @@ import com.auction.shared.model.entity.User;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AdminController {
 
-    // --- BIẾN CHO TAB SẢN PHẨM ---
     @FXML private TableView<Item> itemTable;
     @FXML private TableColumn<Item, String> colItemName;
     @FXML private TableColumn<Item, String> colItemCategory;
@@ -22,7 +23,6 @@ public class AdminController {
     @FXML private TableColumn<Item, String> colItemStatus;
     @FXML private Label itemMessageLabel;
 
-    // --- BIẾN CHO TAB NGƯỜI DÙNG ---
     @FXML private TableView<User> userTable;
     @FXML private TableColumn<User, String> colUsername;
     @FXML private TableColumn<User, String> colEmail;
@@ -34,13 +34,11 @@ public class AdminController {
 
     @FXML
     public void initialize() {
-        // Cấu hình Cột Sản phẩm
         colItemName.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
         colItemCategory.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getClass().getSimpleName()));
         colItemPrice.setCellValueFactory(data -> new SimpleStringProperty(String.format("%,.0f VND", data.getValue().getStartingPrice())));
         colItemStatus.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatus()));
 
-        // Cấu hình Cột Người dùng
         colUsername.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
         colEmail.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getEmail()));
         colRole.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole()));
@@ -49,7 +47,6 @@ public class AdminController {
     }
 
     private void loadMockData() {
-        // Lấy 1 Sản phẩm từ MockData và ép nó về trạng thái "Đang chờ duyệt (PENDING)"
         pendingItems = new ArrayList<>();
         if(!MockDataService.getFakeAuctions().isEmpty()){
             Item mockItem = MockDataService.getFakeAuctions().get(0).getItem();
@@ -58,13 +55,11 @@ public class AdminController {
         }
         itemTable.setItems(FXCollections.observableArrayList(pendingItems));
 
-        // Lấy thông tin User từ MockData
         allUsers = new ArrayList<>();
         allUsers.add(MockDataService.getFakeUser());
         userTable.setItems(FXCollections.observableArrayList(allUsers));
     }
 
-    // ================= XỬ LÝ SẢN PHẨM =================
     @FXML
     private void handleApproveItem() {
         Item selected = itemTable.getSelectionModel().getSelectedItem();
@@ -74,7 +69,7 @@ public class AdminController {
             return;
         }
         selected.setStatus("APPROVED");
-        itemTable.refresh(); // Cập nhật lại màu sắc chữ trên bảng
+        itemTable.refresh();
         itemMessageLabel.setStyle("-fx-text-fill: #00ff00;");
         itemMessageLabel.setText("Đã duyệt thành công: " + selected.getName());
     }
@@ -89,11 +84,10 @@ public class AdminController {
         }
         selected.setStatus("REJECTED");
         itemTable.refresh();
-        itemMessageLabel.setStyle("-fx-text-fill: #e65100;"); // Màu cam cảnh báo
+        itemMessageLabel.setStyle("-fx-text-fill: #e65100;");
         itemMessageLabel.setText("Đã từ chối: " + selected.getName());
     }
 
-    // ================= XỬ LÝ NGƯỜI DÙNG =================
     @FXML
     private void handleBanUser() {
         User selected = userTable.getSelectionModel().getSelectedItem();

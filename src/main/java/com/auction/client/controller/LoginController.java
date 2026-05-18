@@ -1,9 +1,15 @@
 package com.auction.client.controller;
+
 import com.auction.client.util.SceneManager;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+
 /** Controller cho login.fxml */
 public class LoginController {
+
     @FXML private TextField emailField;      // ô nhập email
     @FXML private PasswordField passwordField; // ô nhập password
     @FXML private Button signinButton;       // nút SIGN IN
@@ -37,8 +43,7 @@ public class LoginController {
         }
 
         // Bước 4: Kiểm tra đúng/sai (tạm thời dùng mock)
-        if (email.equals("admin@gmail.com")
-                && password.equals("123")) {
+        if (email.equals("admin@gmail.com") && password.equals("123")) {
             errorLabel.setStyle("-fx-text-fill: #00ff00;");
             errorLabel.setText("Đăng nhập thành công!");
             SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
@@ -47,10 +52,9 @@ public class LoginController {
             errorLabel.setText("Sai email hoặc mật khẩu!");
         }
     }
+
     @FXML
     private void handleRegisterLink() {
-        SceneManager.switchTo(
-                "/com/auction/fxml/auth/register.fxml"
-      );
+        SceneManager.switchTo("/com/auction/fxml/auth/register.fxml");
     }
 }

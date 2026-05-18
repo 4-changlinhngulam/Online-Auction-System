@@ -41,6 +41,7 @@ public class LoginController {
                 && password.equals("123")) {
             errorLabel.setStyle("-fx-text-fill: #00ff00;");
             errorLabel.setText("Đăng nhập thành công!");
+            SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
         } else {
             errorLabel.setStyle("-fx-text-fill: #ff6b6b;");
             errorLabel.setText("Sai email hoặc mật khẩu!");

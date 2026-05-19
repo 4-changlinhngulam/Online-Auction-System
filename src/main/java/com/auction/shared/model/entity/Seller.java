@@ -23,27 +23,10 @@ public class Seller extends User {
         return "SELLER";
     }
 
-    @Override
-    public void showMenu() {
-        // Logic hiển thị menu của người bán
-    }
-
     public Item postNewProduct(ItemType itemType, String id, String name, double startingPrice) {
         // Xử lý kiểu của Item thông qua Factory
         Item newItem = ItemFactory.createItem(itemType, id, name, startingPrice);
         newItem.setStatus("PENDING");
         return newItem;
-    }
-
-    public void editProduct() {
-        // Chỉnh sửa thông tin sản phẩm
-    }
-
-    public void removeProduct() {
-        // Xóa sản phẩm
-    }
-
-    public void trackMyAuctions() {
-        // Xem các phiên đấu giá của mình
     }
 }

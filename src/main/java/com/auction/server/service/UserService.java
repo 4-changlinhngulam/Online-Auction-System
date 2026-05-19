@@ -111,4 +111,62 @@ public class UserService {
             return Response.error("Đã xảy ra lỗi máy chủ khi tải thông tin người dùng.");
         }
     }
+
+    /**
+     * Cập nhật thông tin User
+     */
+    public Response updateProfile(User user) {
+        if (user == null || user.getId() == null) {
+            return Response.error("Dữ liệu người dùng không hợp lệ.");
+        }
+        try {
+            userDAO.update(user);
+            user.setPassword(null);
+            return new Response(true, "Cập nhật thông tin thành công.", user);
+        } catch (Exception e) {
+            System.err.println("Lỗi hệ thống khi cập nhật User: " + e.getMessage());
+            return Response.error("Lỗi máy chủ khi cập nhật thông tin.");
+        }
+    }
+
+    /**
+     * Lấy danh sách tất cả User (thường dùng cho Admin)
+     */
+    public Response getAllUsers() {
+        try {
+            java.util.List<User> users = userDAO.findAll();
+            // Che mật khẩu
+            for (User u : users) {
+                u.setPassword(null);
+            }
+            return new Response(true, "Lấy danh sách người dùng thành công.", users);
+        } catch (Exception e) {
+            System.err.println("Lỗi hệ thống khi tải danh sách User: " + e.getMessage());
+            return Response.error("Lỗi máy chủ khi tải danh sách người dùng.");
+        }
+    }
+
+    /**
+     * Khóa User (Chuyển trạng thái sang BANNED) thay vì xóa hoàn toàn
+     */
+    public Response banUser(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return Response.error("ID người dùng không được để trống.");
+        }
+        try {
+            User user = userDAO.findById(userId);
+            if (user == null) {
+                return Response.error("Không tìm thấy người dùng.");
+            }
+            
+            user.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);
+            userDAO.update(user);
+            
+            return new Response(true, "Khóa người dùng thành công.", null);
+        } catch (Exception e) {
+            System.err.println("Lỗi hệ thống khi khóa User: " + e.getMessage());
+            return Response.error("Lỗi máy chủ khi thao tác khóa người dùng.");
+        }
+    }
 }
+

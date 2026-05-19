@@ -36,10 +36,6 @@ public class Bidder extends User implements BidObserver {
         return "BIDDER";
     }
 
-    @Override
-    public void showMenu() {
-    }
-
     public double placeManualBid(double currentPrice, double bidAmount) {
         if (bidAmount <= currentPrice) {
             throw new IllegalArgumentException("Invalid bid");

@@ -50,7 +50,7 @@ public abstract class User extends Entity {
     }
 
     public void setEmail(String email) {
-        // Cập nhật email nếu cần
+        this.email = email;
     }
 
     public String getUsername() {

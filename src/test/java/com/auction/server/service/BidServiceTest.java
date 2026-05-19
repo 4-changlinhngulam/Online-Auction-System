@@ -49,24 +49,27 @@ class BidServiceTest {
     @Test
     @DisplayName("Đặt giá: Thất bại do thiếu thông tin (Null ID)")
     void testPlaceBid_Fail_NullIds() {
-        // Cố tình truyền null vào ID
-        Response response = bidService.placeBid(null, "USR_001", 2000.0);
-        assertFalse(response.isSuccess());
-        assertEquals("Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", response.getMessage());
+        Response response1 = bidService.placeBid(null, "USR_001", 2000.0);
+        assertFalse(response1.isSuccess());
+        assertEquals("Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", response1.getMessage());
 
         Response response2 = bidService.placeBid("AUC_123", null, 2000.0);
         assertFalse(response2.isSuccess());
+        assertEquals("Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", response2.getMessage());
 
-        // Xác minh không gọi xuống tầng Manager
         verify(auctionManager, never()).processNewBid(anyString(), anyString(), anyDouble());
     }
 
     @Test
-    @DisplayName("Đặt giá: Thất bại do nhập số tiền âm")
+    @DisplayName("Đặt giá: Thất bại do nhập số tiền âm hoặc bằng 0")
     void testPlaceBid_Fail_InvalidAmount() {
-        Response response = bidService.placeBid("AUC_123", "USR_001", -500.0);
-        assertFalse(response.isSuccess());
-        assertEquals("Số tiền đặt giá phải lớn hơn 0.", response.getMessage());
+        Response responseNegative = bidService.placeBid("AUC_123", "USR_001", -500.0);
+        assertFalse(responseNegative.isSuccess());
+        assertEquals("Số tiền đặt giá phải lớn hơn 0.", responseNegative.getMessage());
+
+        Response responseZero = bidService.placeBid("AUC_123", "USR_001", 0.0);
+        assertFalse(responseZero.isSuccess());
+        assertEquals("Số tiền đặt giá phải lớn hơn 0.", responseZero.getMessage());
     }
 
     // ==========================================
@@ -82,14 +85,26 @@ class BidServiceTest {
 
         assertTrue(response.isSuccess());
         assertEquals(1, ((List<?>) response.getData()).size());
+        assertEquals("Lấy lịch sử thành công.", response.getMessage());
     }
 
     @Test
     @DisplayName("Lấy lịch sử đấu giá: Thất bại do mã phiên rỗng")
     void testGetBidHistory_Fail_EmptyAuctionId() {
-        Response response = bidService.getBidHistory("   "); // Chuỗi toàn khoảng trắng
+        Response response = bidService.getBidHistory("   ");
         assertFalse(response.isSuccess());
         assertEquals("Mã phiên đấu giá không hợp lệ.", response.getMessage());
         verify(bidTransactionDAO, never()).getBidsByAuctionId(anyString());
+    }
+
+    @Test
+    @DisplayName("Lấy lịch sử đấu giá: Thất bại do lỗi hệ thống (Exception)")
+    void testGetBidHistory_Fail_SystemError() throws Exception {
+        when(bidTransactionDAO.getBidsByAuctionId("AUC_123")).thenThrow(new RuntimeException("Lỗi kết nối DB"));
+
+        Response response = bidService.getBidHistory("AUC_123");
+
+        assertFalse(response.isSuccess());
+        assertEquals("Lỗi máy chủ khi lấy lịch sử.", response.getMessage());
     }
 }

@@ -8,15 +8,12 @@ class ArtTest {
 
     @Test
     void testArtCreation() {
-        // Given
         String id = "ART001";
         String name = "Mona Lisa";
         double startingPrice = 1000000.0;
 
-        // When
         Art art = new Art(id, name, startingPrice);
 
-        // Then
         assertNotNull(art);
         assertEquals(id, art.getId());
         assertEquals(name, art.getName());
@@ -24,3 +21,4 @@ class ArtTest {
         assertEquals("PENDING", art.getStatus());
     }
 }
+1

@@ -1,15 +1,28 @@
 package com.auction.shared.model.entity;
-import org.junit.jupiter.api.*;
+
+import com.auction.shared.model.enums.UserRole;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class AdminTest {
 
     @Test
-    @DisplayName("Admin phải có đúng Role và thông tin khởi tạo")
-    void testAdminInitialization() {
-        Admin admin = new Admin("admin_root", "root123", "admin@auction.com");
+    void testAdminCreation() {
+        // Given
+        String name = "testadmin";
+        String password = "password789";
+        String email = "admin@example.com";
+
+        // When
+        Admin admin = new Admin(name, password, email);
+
+        // Then
+        assertNotNull(admin);
+        assertEquals(name, admin.getName());
+        assertEquals(password, admin.getPassword());
+        assertEquals(email, admin.getEmail());
+        assertEquals(UserRole.ADMIN, admin.role);
         assertEquals("ADMIN", admin.getRole());
-        assertEquals("admin_root", admin.getUsername());
     }
 }

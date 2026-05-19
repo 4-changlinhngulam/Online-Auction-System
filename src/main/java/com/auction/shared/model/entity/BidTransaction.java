@@ -16,6 +16,7 @@ public class BidTransaction extends Entity {
 
     public BidTransaction() {
         this.timestamp = LocalDateTime.now();
+        this.setId(generateId()); // Tự động gán ID khi khởi tạo giao dịch
     }
 
     // Phương thức tĩnh để tạo ID ngẫu nhiên cho giao dịch
@@ -57,6 +58,7 @@ public class BidTransaction extends Entity {
     }
 
     public void printInfo() {
-        // In chi tiết giao dịch
+        System.out.printf("Giao dịch [%s]: Phiên %s - User %s đã đặt mức giá $%.2f vào lúc %s%n",
+                getId(), auctionId, bidderId, amount, timestamp);
     }
 }

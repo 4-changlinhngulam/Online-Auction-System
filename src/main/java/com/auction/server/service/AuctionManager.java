@@ -12,8 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidTransactionDAO;
-import com.auction.shared.exception.AuctionClosedException;
-import com.auction.shared.exception.InvalidBidException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.BidObserver;
 import com.auction.shared.model.entity.BidTransaction;
@@ -62,42 +60,16 @@ public class AuctionManager {
     }
 
     /**
-     * Hàm xử lý ra giá. Từ khóa `synchronized` CỰC KỲ QUAN TRỌNG:
-     * Ngăn chặn việc 2 người bấm "Ra giá" cùng 1 phần nghìn giây gây lỗi giá.
+     * [Fix 2] Nạp lại các phiên đấu giá đang mở từ Database khi Server khởi động
      */
-    public synchronized boolean placeBid(String auctionId, Bidder bidder, double bidAmount)
-            throws AuctionClosedException, InvalidBidException {
-
-        Auction auction = activeAuctions.get(auctionId);
-
-        if (auction == null) {
-            throw new IllegalArgumentException("Không tìm thấy phiên đấu giá này!");
+    public void init() {
+        System.out.println("Đang khôi phục các phiên đấu giá từ Database...");
+        List<Auction> openAuctions = auctionDAO.getOpenAuctions();
+        for (Auction auction : openAuctions) {
+            addAuction(auction);
+            scheduleAuctionEnd(auction);
+            System.out.println("- Đã khôi phục và tiếp tục đếm giờ cho phiên: " + auction.getId());
         }
-
-        if (auction.getStatus() != AuctionStatus.OPEN) {
-            throw new AuctionClosedException("Phiên đấu giá đã kết thúc. Bạn không thể ra giá nữa!");
-        }
-
-        if (bidAmount <= auction.getCurrentPrice()) {
-            throw new InvalidBidException("Mức giá phải cao hơn giá hiện tại (" + auction.getCurrentPrice() + ")");
-        }
-
-        auction.setCurrentPrice(bidAmount);
-        auction.setCurrentWinner(bidder);
-
-        // Lưu trạng thái mới xuống Database ngay lập tức
-        try {
-            auctionDAO.update(auction);
-            System.out.println("Người dùng " + bidder.getUsername() + " vừa ra giá " + bidAmount + " cho " + auction.getId());
-        } catch (Exception e) {
-            System.err.println("Lỗi khi lưu giá mới xuống DB!");
-            e.printStackTrace();
-            return false;
-        }
-
-        // Thông báo cho tất cả người dùng khác cập nhật màn hình
-        notifyObservers(auction);
-        return true;
     }
 
     public void endAuction(String auctionId) {
@@ -163,57 +135,44 @@ public class AuctionManager {
      * Xử lý một lượt đặt giá mới (Real-time).
      * BẮT BUỘC dùng 'synchronized' để chặn nhiều người đặt giá cùng lúc.
      */
-    public synchronized Response processNewBid(String auctionId, String bidderId, double bidAmount) {
+    public Response processNewBid(String auctionId, String bidderId, double bidAmount) {
 
-        // 1. Lấy thông tin phiên đấu giá từ RAM
         Auction auction = activeAuctions.get(auctionId);
-
-        // Kiểm tra phiên đấu giá có tồn tại trên RAM không
         if (auction == null) {
-            return new Response(false, "Phiên đấu giá không tồn tại hoặc đã kết thúc.", null);
+            return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        // Kiểm tra trạng thái phải là OPEN
-        if (auction.getStatus() != AuctionStatus.OPEN) {
-            return new Response(false, "Phiên đấu giá hiện không mở.", null);
+        // Tạo đối tượng Bidder tạm từ ID
+        Bidder bidder = new Bidder();
+        bidder.setId(bidderId);
+
+        // 1. ỦY QUYỀN cho Auction tự xử lý logic kiểm tra giá (Bypass đồng bộ hóa ở Entity)
+        boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
+
+        if (!isValidBid) {
+            return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
         }
 
-        // 2. Kiểm tra giá đặt: Phải cao hơn giá cao nhất hiện tại
-        if (bidAmount <= auction.getCurrentPrice()) {
-            return new Response(false, "Giá đặt phải lớn hơn giá hiện tại (" + auction.getCurrentPrice() + ").", null);
-        }
-
+        // 2. NẾU HỢP LỆ -> GHI DATABASE
         try {
-            // 3. Cập nhật thông tin TRÊN RAM ngay lập tức
-            auction.setCurrentPrice(bidAmount);
-
-            // Cập nhật người thắng tạm thời
-            Bidder tempWinner = new Bidder();
-            tempWinner.setId(bidderId);
-            auction.setCurrentWinner(tempWinner);
-
-            // 4. Ghi sổ TRONG DATABASE
             BidTransaction transaction = new BidTransaction();
             transaction.setAuctionId(auctionId);
             transaction.setBidderId(bidderId);
             transaction.setAmount(bidAmount);
 
             BidTransactionDAO bidDao = new BidTransactionDAO();
-            boolean isSaved = bidDao.save(transaction);
+            bidDao.save(transaction); // Lưu lịch sử
 
-            if (!isSaved) {
-                return new Response(false, "Lỗi khi ghi nhận giao dịch vào cơ sở dữ liệu.", null);
-            }
+            auctionDAO.update(auction); // Lưu giá mới của phiên
 
-            // 5. Cập nhật giá mới của phiên đấu giá vào bảng 'auctions'
-            auctionDAO.update(auction);
-
+            // 3. THÔNG BÁO CHO CÁC CLIENT KHÁC
             notifyObservers(auction);
 
+            System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
             return new Response(true, "Đặt giá thành công!", null);
 
         } catch (Exception e) {
-            System.err.println("Lỗi Server khi xử lý Bid: " + e.getMessage());
+            System.err.println("Lỗi Server khi lưu Bid: " + e.getMessage());
             return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
         }
     }

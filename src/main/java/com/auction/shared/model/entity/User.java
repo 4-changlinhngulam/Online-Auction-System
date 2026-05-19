@@ -1,6 +1,7 @@
 package com.auction.shared.model.entity;
 
 import com.auction.shared.model.enums.UserRole;
+import com.auction.shared.model.enums.UserStatus;
 
 /**
  * 1. Lớp User kế thừa từ Entity và là lớp trừu tượng đại diện cho mọi đối tượng người dùng trong hệ thống.
@@ -13,6 +14,7 @@ public abstract class User extends Entity {
     protected String password;
     protected UserRole role;
     protected String email;
+    protected UserStatus status = UserStatus.ACTIVE; // Mặc định là ACTIVE
 
     public User(String name, String password, UserRole role, String email) {
         this.name = name;
@@ -57,11 +59,17 @@ public abstract class User extends Entity {
         return this.name;
     }
 
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+
     public boolean login(String user, String pass) {
         return this.name.equals(user) && this.password.equals(pass);
     }
 
     public abstract String getRole();
-
-    public abstract void showMenu();
 }

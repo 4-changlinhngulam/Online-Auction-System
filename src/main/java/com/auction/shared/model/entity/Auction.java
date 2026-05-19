@@ -13,50 +13,38 @@ public class Auction extends Entity {
     private LocalDateTime endTime;
     private AuctionStatus status;
     private List<BidTransaction> bidHistory = new ArrayList<>();
-    private List<BidObserver> observers = new ArrayList<>();
-
     public Auction() {
     }
 
-    public void addObserver(BidObserver obs) {
-        if (obs != null && !observers.contains(obs)) {
-            observers.add(obs);
-        }
-    }
 
-    private void notifyObservers() {
-        String winnerId = (currentWinner != null) ? currentWinner.getId() : "";
-        for (BidObserver obs : observers) {
-            obs.update(this.item, this.currentPrice, winnerId);
-        }
-    }
 
     public synchronized boolean handleNewBid(Bidder bidder, double bidAmount) {
-        if (status != AuctionStatus.RUNNING) {
+        if (this.status != AuctionStatus.RUNNING) {
             return false;
         }
 
-        if (endTime != null && LocalDateTime.now().isAfter(endTime)) {
+        if (this.endTime != null && LocalDateTime.now().isAfter(endTime)) {
             this.status = AuctionStatus.FINISHED;
             return false;
         }
 
-        if (bidAmount <= currentPrice) {
-            return false;
+        if (bidAmount <= this.currentPrice) {
+            return false; // Giá không hợp lệ
         }
 
+        // Cập nhật trạng thái RAM
         this.currentPrice = bidAmount;
         this.currentWinner = bidder;
 
+        // Ghi log trên RAM
         BidTransaction transaction = new BidTransaction();
         transaction.setBidderId(bidder.getId());
         transaction.setAuctionId(this.getId());
         transaction.setAmount(bidAmount);
         transaction.setTimestamp(LocalDateTime.now());
-        bidHistory.add(transaction);
+        this.bidHistory.add(transaction);
 
-        notifyObservers();
-        return true;
+        return true; // Trả về true nếu hợp lệ
     }
 
     public void startAuction() {

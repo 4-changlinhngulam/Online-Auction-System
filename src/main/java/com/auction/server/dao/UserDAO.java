@@ -7,6 +7,7 @@ import com.auction.shared.model.entity.Bidder;
 import com.auction.shared.model.entity.Seller;
 import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.UserRole;
+import com.auction.shared.model.enums.UserStatus;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,7 +27,7 @@ public class UserDAO {
             throw new IllegalArgumentException("User và ID không được phép null");
         }
 
-        String sql = "INSERT INTO users (id, username, password, email, role) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (id, username, password, email, role, status) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -45,6 +46,8 @@ public class UserDAO {
                 pstmt.setString(5, UserRole.BIDDER.name());
             }
 
+            pstmt.setString(6, user.getStatus().name());
+
             pstmt.executeUpdate();
             System.out.println("Đã lưu User " + user.getUsername() + " lên Database!");
 
@@ -62,7 +65,7 @@ public class UserDAO {
             throw new IllegalArgumentException("User và ID không được phép null");
         }
 
-        String sql = "UPDATE users SET username = ?, password = ?, email = ?, role = ? WHERE id = ?";
+        String sql = "UPDATE users SET username = ?, password = ?, email = ?, role = ?, status = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -79,7 +82,8 @@ public class UserDAO {
                 pstmt.setString(4, UserRole.BIDDER.name());
             }
 
-            pstmt.setString(5, user.getId());
+            pstmt.setString(5, user.getStatus().name());
+            pstmt.setString(6, user.getId());
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected == 0) {
@@ -189,6 +193,11 @@ public class UserDAO {
         user.setName(rs.getString("username"));
         user.setPassword(rs.getString("password"));
         user.setEmail(rs.getString("email"));
+        
+        String statusStr = rs.getString("status");
+        if (statusStr != null) {
+            user.setStatus(UserStatus.valueOf(statusStr));
+        }
 
         return user;
     }

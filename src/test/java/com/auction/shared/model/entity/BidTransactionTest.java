@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class BidTransactionTest {
 
     @Test
-    void testGenerateId() {
-        String id1 = BidTransaction.generateId();
-        String id2 = BidTransaction.generateId();
-        assertNotNull(id1);
-        assertNotNull(id2);
-        assertNotEquals(id1, id2);
+    void testBidTransactionIdGeneration() {
+        BidTransaction t1 = new BidTransaction();
+        BidTransaction t2 = new BidTransaction();
+
+        assertNotNull(t1.getId(), "ID phải tự động được sinh ra");
+        assertNotEquals(t1.getId(), t2.getId(), "Hai đối tượng khác nhau phải có ID khác nhau");
     }
 }

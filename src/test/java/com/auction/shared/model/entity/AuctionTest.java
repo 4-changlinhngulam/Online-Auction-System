@@ -15,7 +15,7 @@ class AuctionTest {
 
     @BeforeEach
     void setUp() {
-        testItem = new Art("ART001", "Test Art", 100.0, "Artist", 2024);
+        testItem = new Art();
         auction = new Auction();
         auction.setItem(testItem);
         auction.setCurrentPrice(100.0);

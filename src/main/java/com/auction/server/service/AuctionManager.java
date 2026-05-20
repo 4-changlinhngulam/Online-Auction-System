@@ -23,7 +23,7 @@ import com.auction.shared.protocol.Response;
 /** Singleton – Quản lý toàn bộ phiên đấu giá. Xử lý concurrency + Observer notify. */
 public class AuctionManager {
     // 1. Singleton: Đảm bảo chỉ có 1 Manager duy nhất trên toàn Server
-    private static AuctionManager instance;
+    private static volatile AuctionManager instance;
 
     // 2. Lưu trữ các phiên đấu giá đang chạy.
     private final Map<String, Auction> activeAuctions;

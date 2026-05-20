@@ -1,17 +1,15 @@
 package com.auction.server.service;
+
 import com.auction.server.dao.UserDAO;
 import com.auction.shared.exception.AuthenticationException;
 import com.auction.shared.model.entity.User;
 import com.auction.shared.protocol.Response;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.UUID;
 
 /** Nghiệp vụ User: đăng ký, đăng nhập, phân quyền. */
 public class UserService {
-    // TODO: Inject UserDAO
-    // TODO: login(username, password) throws AuthenticationException
-    // TODO: register(User user)
-    // TODO: getUserById(String id)
 
     private final UserDAO userDAO;
 
@@ -38,7 +36,7 @@ public class UserService {
                 throw new AuthenticationException("Tài khoản không tồn tại.");
             }
 
-            if (!user.getPassword().equals(password)) {
+            if (!BCrypt.checkpw(password, user.getPassword())) {
                 throw new AuthenticationException("Sai mật khẩu.");
             }
 
@@ -74,7 +72,11 @@ public class UserService {
             if (user.getId() == null || user.getId().isEmpty()) {
                 user.setId(UUID.randomUUID().toString());
             }
-            
+
+            // 3. Mã hóa mật khẩu
+            String hashedPassword = BCrypt.hashpw(user.getPassword(), BCrypt.gensalt());
+            user.setPassword(hashedPassword);
+
             userDAO.save(user);
 
             // 4. Che mật khẩu trước khi trả về
@@ -158,10 +160,10 @@ public class UserService {
             if (user == null) {
                 return Response.error("Không tìm thấy người dùng.");
             }
-            
+
             user.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);
             userDAO.update(user);
-            
+
             return new Response(true, "Khóa người dùng thành công.", null);
         } catch (Exception e) {
             System.err.println("Lỗi hệ thống khi khóa User: " + e.getMessage());
@@ -169,4 +171,3 @@ public class UserService {
         }
     }
 }
-

@@ -1,4 +1,5 @@
 package com.auction.server.service;
+
 import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.entity.Item;
 import com.auction.shared.protocol.Response;
@@ -7,8 +8,6 @@ import java.util.List;
 
 /** CRUD nghiệp vụ cho Item. */
 public class ItemService {
-    // TODO: Inject ItemDAO
-    // TODO: createItem / getItem / updateItem / deleteItem / getAllItems
 
     private final ItemDAO itemDAO;
 
@@ -42,7 +41,6 @@ public class ItemService {
             return Response.error("Đã xảy ra lỗi trên máy chủ khi tạo sản phẩm.");
         }
     }
-
 
     // Lấy danh sách tất cả sản phẩm.
 

@@ -33,7 +33,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Đăng nhập: Thành công")
     void testLogin_Success() throws Exception {
-        User mockUser = new Bidder("testuser", "password123", "test@gmail.com");
+        User mockUser = new Bidder("testuser", org.mindrot.jbcrypt.BCrypt.hashpw("password123", org.mindrot.jbcrypt.BCrypt.gensalt()), "test@gmail.com");
         when(userDAO.findByUsername("testuser")).thenReturn(mockUser);
 
         Response response = userService.login("testuser", "password123");

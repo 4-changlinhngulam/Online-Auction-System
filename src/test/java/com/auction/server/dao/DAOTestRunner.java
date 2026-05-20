@@ -10,11 +10,11 @@ import java.util.List;
 
 public class DAOTestRunner {
     public static void main(String[] args) {
-        System.out.println("=== BẮT ĐẦU KIỂM TRA DATABASE & DAO (BẢN CẢI TIẾN) ===");
+        System.out.println("=== BẮT ĐẦU KIỂM TRA DATABASE & DAO ===");
 
         try {
             Connection conn = DatabaseConnection.getInstance().getConnection();
-            
+
             // 1. Tự động cập nhật bảng users
             System.out.println("\n1. Đang tự động cập nhật cấu trúc bảng 'users' (Thêm cột status)...");
             try (Statement stmt = conn.createStatement()) {
@@ -25,7 +25,8 @@ public class DAOTestRunner {
                 if (e.getMessage().contains("Duplicate column name")) {
                     System.out.println("-> Cột 'status' đã tồn tại, bỏ qua bước này.");
                 } else {
-                    System.out.println("-> Cảnh báo khi cấu trúc bảng (thường là do cột đã tồn tại): " + e.getMessage());
+                    System.out
+                            .println("-> Cảnh báo khi cấu trúc bảng (thường là do cột đã tồn tại): " + e.getMessage());
                 }
             }
 
@@ -36,19 +37,20 @@ public class DAOTestRunner {
 
             if (users.size() > 0) {
                 User testUser = users.get(0);
-                System.out.println("-> Thông tin User mẫu ID: " + testUser.getId() + " - Tên: " + testUser.getUsername() + " - Trạng thái ban đầu: " + testUser.getStatus());
-                
+                System.out.println("-> Thông tin User mẫu ID: " + testUser.getId() + " - Tên: " + testUser.getUsername()
+                        + " - Trạng thái ban đầu: " + testUser.getStatus());
+
                 System.out.println("\n3. Đang chạy test tính năng BAN_USER (Khóa tài khoản)...");
                 UserService userService = new UserService(userDAO);
                 Response res = userService.banUser(testUser.getId());
                 System.out.println("-> Kết quả gọi UserService.banUser(): " + res.getMessage());
-                
-                // Lấy lại từ DB để check 
+
+                // Lấy lại từ DB để check
                 User updatedUser = userDAO.findById(testUser.getId());
                 System.out.println("-> Trạng thái thực tế trong Database sau khi khóa: " + updatedUser.getStatus());
-                
-                if(updatedUser.getStatus() == com.auction.shared.model.enums.UserStatus.BANNED) {
-                     System.out.println("-> TÍNH NĂNG BAN_USER ĐÃ HOẠT ĐỘNG HOÀN HẢO!");
+
+                if (updatedUser.getStatus() == com.auction.shared.model.enums.UserStatus.BANNED) {
+                    System.out.println("-> TÍNH NĂNG BAN_USER ĐÃ HOẠT ĐỘNG HOÀN HẢO!");
                 }
             } else {
                 System.out.println("-> Không có user nào trong Database để test tính năng BAN.");

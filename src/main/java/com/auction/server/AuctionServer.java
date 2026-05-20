@@ -16,7 +16,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class AuctionServer {
     private static final int PORT = 9999;
-    private static final ExecutorService THREAD_POOL = Executors.newCachedThreadPool();
+    private static final int MAX_CLIENTS = 200;
+    private static final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(MAX_CLIENTS);
 
     public static void main(String[] args) {
         System.out.println("Server đang khởi động...");

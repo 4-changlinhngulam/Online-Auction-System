@@ -282,7 +282,9 @@ public class ClientHandler implements Runnable, BidObserver {
                     this.currentOut.flush();
                 }
             } catch (IOException e) {
-                System.err.println("Lỗi khi gửi Notification tới Client: " + e.getMessage());
+                System.err.println("Lỗi kết nối tới Client. Tự động ngắt Observer: " + socket.getRemoteSocketAddress());
+                // Hủy đăng ký ngay lập tức khi phát hiện socket đứt
+                AuctionManager.getInstance().removeObserver(this);
             }
         }
     }

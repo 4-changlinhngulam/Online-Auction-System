@@ -27,7 +27,7 @@ public class ItemDAO {
             throw new IllegalArgumentException("Item và ID không được phép null");
         }
 
-        String sql = "INSERT INTO items (id, name, description, starting_price, item_type) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO items (id, name, description, starting_price, item_type, warranty_months, mileage) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -37,13 +37,19 @@ public class ItemDAO {
             pstmt.setString(3, item.getDescription());
             pstmt.setDouble(4, item.getStartingPrice());
 
-            // Phân loại Item
+            // Phân loại Item và lưu thuộc tính đặc thù
             if (item instanceof Electronics) {
                 pstmt.setString(5, "ELECTRONICS");
+                pstmt.setInt(6, ((Electronics) item).getWarrantyMonths());
+                pstmt.setNull(7, java.sql.Types.BIGINT);
             } else if (item instanceof Vehicle) {
                 pstmt.setString(5, "VEHICLE");
+                pstmt.setNull(6, java.sql.Types.INTEGER);
+                pstmt.setLong(7, ((Vehicle) item).getMileage());
             } else {
                 pstmt.setString(5, "ART");
+                pstmt.setNull(6, java.sql.Types.INTEGER);
+                pstmt.setNull(7, java.sql.Types.BIGINT);
             }
 
             pstmt.executeUpdate();
@@ -63,7 +69,7 @@ public class ItemDAO {
             throw new IllegalArgumentException("Item và ID không được phép null");
         }
 
-        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, item_type = ? WHERE id = ?";
+        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, item_type = ?, warranty_months = ?, mileage = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -74,13 +80,19 @@ public class ItemDAO {
 
             if (item instanceof Electronics) {
                 pstmt.setString(4, "ELECTRONICS");
+                pstmt.setInt(5, ((Electronics) item).getWarrantyMonths());
+                pstmt.setNull(6, java.sql.Types.BIGINT);
             } else if (item instanceof Vehicle) {
                 pstmt.setString(4, "VEHICLE");
+                pstmt.setNull(5, java.sql.Types.INTEGER);
+                pstmt.setLong(6, ((Vehicle) item).getMileage());
             } else {
                 pstmt.setString(4, "ART");
+                pstmt.setNull(5, java.sql.Types.INTEGER);
+                pstmt.setNull(6, java.sql.Types.BIGINT);
             }
 
-            pstmt.setString(5, item.getId());
+            pstmt.setString(7, item.getId());
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected == 0) {

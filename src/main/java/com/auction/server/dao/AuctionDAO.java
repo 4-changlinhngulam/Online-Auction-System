@@ -172,10 +172,54 @@ public class AuctionDAO {
     // 4. TÌM THEO ID (FIND BY ID)
 
     public Auction findById(String id) throws DataPersistenceException, EntityNotFoundException {
-        return findAll().stream()
-                .filter(a -> a.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy phiên đấu giá có ID: " + id));
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID tìm kiếm không hợp lệ.");
+        }
+
+        String sql = "SELECT * FROM auctions WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, id);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Auction auction = new Auction();
+                    auction.setId(rs.getString("id"));
+                    auction.setCurrentPrice(rs.getDouble("current_price"));
+
+                    if (rs.getTimestamp("start_time") != null) {
+                        auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
+                    }
+                    if (rs.getTimestamp("end_time") != null) {
+                        auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
+                    }
+                    auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
+
+                    // Sử dụng các DAO khác để load dữ liệu liên kết một cách đơn giản
+                    ItemDAO itemDAO = new ItemDAO();
+                    UserDAO userDAO = new UserDAO();
+
+                    auction.setItem(itemDAO.findById(rs.getString("item_id")));
+
+                    String winnerId = rs.getString("current_winner_id");
+                    if (winnerId != null) {
+                        try {
+                            auction.setCurrentWinner((Bidder) userDAO.findById(winnerId));
+                        } catch (Exception e) {
+                            System.err.println("Cảnh báo: Không tìm thấy Winner cho Auction " + auction.getId());
+                        }
+                    }
+
+                    return auction;
+                } else {
+                    throw new EntityNotFoundException("Không tìm thấy phiên đấu giá có ID: " + id);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataPersistenceException("Lỗi khi tìm phiên đấu giá theo ID", e);
+        }
     }
 
     // 5. XÓA (DELETE)

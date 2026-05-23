@@ -88,24 +88,41 @@ public class AuctionManager {
     // OBSERVER PATTERN (CƠ CHẾ THÔNG BÁO PUSH)
 
     public void addObserver(BidObserver observer) {
-        if (!observers.contains(observer)) {
-            observers.add(observer);
+        if (observer != null) {
+            synchronized (observers) {
+                if (!observers.contains(observer)) {
+                    observers.add(observer);
+                }
+            }
         }
     }
 
     public void removeObserver(BidObserver observer) {
-        observers.remove(observer);
+        if (observer != null) {
+            synchronized (observers) {
+                observers.remove(observer);
+            }
+        }
     }
 
     // Hàm này sẽ lặp qua tất cả các Client đang kết nối và báo cho họ biết có giá mới
     private void notifyObservers(Auction updatedAuction) {
-        for (BidObserver observer : observers) {
-            String winnerId = "";
-            if (updatedAuction.getCurrentWinner() != null) {
-                winnerId = updatedAuction.getCurrentWinner().getId();
-            }
+        String winnerId = "";
+        if (updatedAuction.getCurrentWinner() != null) {
+            winnerId = updatedAuction.getCurrentWinner().getId();
+        }
 
-            observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
+        synchronized (observers) {
+            // Tạo bản sao để tránh ConcurrentModificationException khi duyệt
+            List<BidObserver> copyList = new ArrayList<>(observers);
+            for (BidObserver observer : copyList) {
+                try {
+                    observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
+                } catch (Exception e) {
+                    System.err.println("Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage());
+                    observers.remove(observer);
+                }
+            }
         }
     }
 
@@ -136,44 +153,60 @@ public class AuctionManager {
      * BẮT BUỘC dùng 'synchronized' để chặn nhiều người đặt giá cùng lúc.
      */
     public Response processNewBid(String auctionId, String bidderId, double bidAmount) {
-
         Auction auction = activeAuctions.get(auctionId);
         if (auction == null) {
             return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        // Tạo đối tượng Bidder tạm từ ID
-        Bidder bidder = new Bidder();
-        bidder.setId(bidderId);
+        // Đồng bộ hóa trên chính đối tượng phiên đấu giá này để tránh Race Condition đặt giá
+        synchronized (auction) {
+            Bidder bidder = new Bidder();
+            bidder.setId(bidderId);
 
-        // 1. ỦY QUYỀN cho Auction tự xử lý logic kiểm tra giá (Bypass đồng bộ hóa ở Entity)
-        boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
+            // 1. ỦY QUYỀN cho Auction tự xử lý logic kiểm tra giá (Bypass đồng bộ hóa ở Entity)
+            boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
 
-        if (!isValidBid) {
-            return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
-        }
+            if (!isValidBid) {
+                return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
+            }
 
-        // 2. NẾU HỢP LỆ -> GHI DATABASE
-        try {
-            BidTransaction transaction = new BidTransaction();
-            transaction.setAuctionId(auctionId);
-            transaction.setBidderId(bidderId);
-            transaction.setAmount(bidAmount);
+            // 2. NẾU HỢP LỆ -> GHI DATABASE
+            try {
+                BidTransaction transaction = new BidTransaction();
+                transaction.setAuctionId(auctionId);
+                transaction.setBidderId(bidderId);
+                transaction.setAmount(bidAmount);
 
-            BidTransactionDAO bidDao = new BidTransactionDAO();
-            bidDao.save(transaction); // Lưu lịch sử
+                BidTransactionDAO bidDao = new BidTransactionDAO();
+                bidDao.save(transaction); // Lưu lịch sử
 
-            auctionDAO.update(auction); // Lưu giá mới của phiên
+                auctionDAO.update(auction); // Lưu giá mới của phiên
 
-            // 3. THÔNG BÁO CHO CÁC CLIENT KHÁC
-            notifyObservers(auction);
+                // 3. THÔNG BÁO CHO CÁC CLIENT KHÁC
+                notifyObservers(auction);
 
-            System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
-            return new Response(true, "Đặt giá thành công!", null);
+                System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
+                return new Response(true, "Đặt giá thành công!", null);
 
-        } catch (Exception e) {
-            System.err.println("Lỗi Server khi lưu Bid: " + e.getMessage());
-            return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
+            } catch (Exception e) {
+                System.err.println("Lỗi Server khi lưu Bid: " + e.getMessage());
+                // Hoàn tác RAM đơn giản cho bài tập lớn (revert giá trị)
+                List<BidTransaction> history = auction.getBidHistory();
+                if (history != null && !history.isEmpty()) {
+                    history.remove(history.size() - 1);
+                    if (!history.isEmpty()) {
+                        BidTransaction prev = history.get(history.size() - 1);
+                        auction.setCurrentPrice(prev.getAmount());
+                        Bidder prevWinner = new Bidder();
+                        prevWinner.setId(prev.getBidderId());
+                        auction.setCurrentWinner(prevWinner);
+                    } else {
+                        auction.setCurrentPrice(auction.getItem().getStartingPrice());
+                        auction.setCurrentWinner(null);
+                    }
+                }
+                return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
+            }
         }
     }
 }

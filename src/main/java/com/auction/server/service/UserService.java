@@ -122,8 +122,20 @@ public class UserService {
             return Response.error("Dữ liệu người dùng không hợp lệ.");
         }
         try {
+            // Lấy thông tin User hiện tại từ DB để giữ lại mật khẩu cũ nếu người dùng không cập nhật mật khẩu mới
+            User existingUser = userDAO.findById(user.getId());
+
+            if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+                // Giữ nguyên mật khẩu đã mã hóa cũ
+                user.setPassword(existingUser.getPassword());
+            } else {
+                // Mã hóa mật khẩu mới nếu được thay đổi
+                String hashedPassword = BCrypt.hashpw(user.getPassword(), BCrypt.gensalt());
+                user.setPassword(hashedPassword);
+            }
+
             userDAO.update(user);
-            user.setPassword(null);
+            user.setPassword(null); // Che mật khẩu trước khi trả về
             return new Response(true, "Cập nhật thông tin thành công.", user);
         } catch (Exception e) {
             System.err.println("Lỗi hệ thống khi cập nhật User: " + e.getMessage());

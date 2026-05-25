@@ -12,10 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidTransactionDAO;
+import com.auction.server.dao.UserDAO;
+import com.auction.shared.exception.DataPersistenceException;
+import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.BidObserver;
 import com.auction.shared.model.entity.BidTransaction;
 import com.auction.shared.model.entity.Bidder;
+import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.protocol.Response;
 
@@ -107,21 +111,21 @@ public class AuctionManager {
 
     // Hàm này sẽ lặp qua tất cả các Client đang kết nối và báo cho họ biết có giá mới
     private void notifyObservers(Auction updatedAuction) {
-        String winnerId = "";
-        if (updatedAuction.getCurrentWinner() != null) {
-            winnerId = updatedAuction.getCurrentWinner().getId();
-        }
+        String winnerId = (updatedAuction.getCurrentWinner() != null) 
+                          ? updatedAuction.getCurrentWinner().getId() : "";
 
+        List<BidObserver> copyList;
         synchronized (observers) {
             // Tạo bản sao để tránh ConcurrentModificationException khi duyệt
-            List<BidObserver> copyList = new ArrayList<>(observers);
-            for (BidObserver observer : copyList) {
-                try {
-                    observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
-                } catch (Exception e) {
-                    System.err.println("Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage());
-                    observers.remove(observer);
-                }
+            copyList = new ArrayList<>(observers);
+        }
+
+        for (BidObserver observer : copyList) {
+            try {
+                observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
+            } catch (Exception e) {
+                System.err.println("Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage());
+                removeObserver(observer);
             }
         }
     }
@@ -160,8 +164,17 @@ public class AuctionManager {
 
         // Đồng bộ hóa trên chính đối tượng phiên đấu giá này để tránh Race Condition đặt giá
         synchronized (auction) {
-            Bidder bidder = new Bidder();
-            bidder.setId(bidderId);
+            Bidder bidder;
+            try {
+                UserDAO userDAO = new UserDAO();
+                User user = userDAO.findById(bidderId);
+                if (!(user instanceof Bidder)) {
+                    return new Response(false, "Tài khoản không có quyền đặt giá.", null);
+                }
+                bidder = (Bidder) user;
+            } catch (EntityNotFoundException | DataPersistenceException e) {
+                return new Response(false, "Lỗi xác thực người dùng: " + e.getMessage(), null);
+            }
 
             // 1. ỦY QUYỀN cho Auction tự xử lý logic kiểm tra giá (Bypass đồng bộ hóa ở Entity)
             boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
@@ -188,8 +201,8 @@ public class AuctionManager {
                 System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
                 return new Response(true, "Đặt giá thành công!", null);
 
-            } catch (Exception e) {
-                System.err.println("Lỗi Server khi lưu Bid: " + e.getMessage());
+            } catch (DataPersistenceException | EntityNotFoundException e) {
+                System.err.println("Lỗi Database khi lưu Bid: " + e.getMessage());
                 // Hoàn tác RAM đơn giản cho bài tập lớn (revert giá trị)
                 List<BidTransaction> history = auction.getBidHistory();
                 if (history != null && !history.isEmpty()) {

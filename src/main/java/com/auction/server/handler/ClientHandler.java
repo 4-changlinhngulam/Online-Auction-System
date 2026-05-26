@@ -17,15 +17,30 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable, BidObserver {
+
+    private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
 
     private final Socket socket;
     private final UserService userService;
     private final ItemService itemService;
     private final BidService bidService;
     private final AuctionService auctionService;
-    private ObjectOutputStream currentOut;
+
+    // - Concurrency: Dùng `LinkedBlockingQueue` theo mô hình Producer-Consumer để
+    // gửi thông báo bất đồng bộ.
+    // - Lý do: Nếu gửi (writeObject) trực tiếp ngay khi có sự kiện, luồng xử lý
+    // mạng có thể bị block do độ trễ IO,
+    // khiến các client khác bị kẹt. Hàng đợi giúp tách biệt việc nhận/xử lý và việc
+    // gửi đi.
+    private final BlockingQueue<Response> messageQueue = new LinkedBlockingQueue<>();
+    private Thread senderThread;
+
     private User currentUser = null;
 
     public ClientHandler(Socket socket) {
@@ -43,25 +58,43 @@ public class ClientHandler implements Runnable, BidObserver {
                 ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
 
             out.flush();
-            this.currentOut = out; // Lưu lại để BidObserver dùng
 
+            // Khởi chạy luồng chuyên dụng để gửi dữ liệu (Sender Thread)
+            senderThread = new Thread(() -> {
+                try {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        Response res = messageQueue.take(); // Chờ đến khi có message
+                        out.writeObject(res);
+                        out.flush();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    LOGGER.log(Level.INFO, "Sender thread bị ngắt.", e);
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Lỗi khi gửi dữ liệu qua Socket. Tự động ngắt Observer.", e);
+                    AuctionManager.getInstance().removeObserver(this);
+                }
+            });
+            senderThread.start();
+
+            // Luồng chính liên tục đọc Request (Receiver)
             while (true) {
                 Request req = (Request) in.readObject();
                 Response res = dispatch(req);
-                synchronized (out) {
-                    out.writeObject(res);
-                    out.flush();
-                }
+                messageQueue.offer(res); // Đẩy response vào hàng đợi thay vì ghi trực tiếp
             }
 
         } catch (EOFException eof) {
-            System.out.println("Kết nối client đã đóng: " + socket.getRemoteSocketAddress());
+            LOGGER.log(Level.INFO, "Kết nối client đã đóng: " + socket.getRemoteSocketAddress());
         } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Lỗi xử lý client: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Lỗi xử lý client: " + e.getMessage(), e);
         } finally {
+            if (senderThread != null) {
+                senderThread.interrupt(); // Dừng luồng gửi
+            }
             // Hủy đăng ký Observer để tránh Memory Leak
             AuctionManager.getInstance().removeObserver(this);
-            System.out.println("Hủy theo dõi cho Client: " + socket.getRemoteSocketAddress());
+            LOGGER.log(Level.INFO, "Đã dọn dẹp và hủy theo dõi cho Client: " + socket.getRemoteSocketAddress());
         }
     }
 
@@ -137,7 +170,8 @@ public class ClientHandler implements Runnable, BidObserver {
     // --- CÁC HÀM XỬ LÝ ITEM VÀ BID SERVICE ---
 
     private Response processCreateItem(Request req) {
-        if (currentUser == null) return Response.error("Vui lòng đăng nhập.");
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             Item item = (Item) req.getPayload();
             return itemService.createItem(item);
@@ -183,7 +217,8 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processPlaceBid(Request req) {
-        if (currentUser == null) return Response.error("Vui lòng đăng nhập.");
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             Object[] data = (Object[]) req.getPayload();
             String auctionId = (String) data[0];
@@ -212,7 +247,8 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processUpdateUserProfile(Request req) {
-        if (currentUser == null) return Response.error("Vui lòng đăng nhập.");
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             User user = (User) req.getPayload();
             if (!user.getId().equals(currentUser.getId())) {
@@ -225,7 +261,8 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processCreateAuction(Request req) {
-        if (currentUser == null) return Response.error("Vui lòng đăng nhập.");
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             Auction auction = (Auction) req.getPayload();
             return auctionService.createAuction(auction);
@@ -270,22 +307,13 @@ public class ClientHandler implements Runnable, BidObserver {
 
     @Override
     public void update(Item item, double newPrice, String lastBidderId) {
-        if (this.currentOut != null) {
-            try {
-                // Đóng gói dữ liệu update
-                Object[] updateData = new Object[] { item, newPrice, lastBidderId };
-                Response notification = new Response(true, "NOTIFICATION_NEW_BID", updateData);
+        Object[] updateData = new Object[] { item, newPrice, lastBidderId };
+        Response notification = new Response(true, "NOTIFICATION_NEW_BID", updateData);
 
-                // Đồng bộ để tránh xung đột với luồng gửi Response chính
-                synchronized (this.currentOut) {
-                    this.currentOut.writeObject(notification);
-                    this.currentOut.flush();
-                }
-            } catch (IOException e) {
-                System.err.println("Lỗi kết nối tới Client. Tự động ngắt Observer: " + socket.getRemoteSocketAddress());
-                // Hủy đăng ký ngay lập tức khi phát hiện socket đứt
-                AuctionManager.getInstance().removeObserver(this);
-            }
+        // Đẩy thông báo vào hàng đợi (non-blocking)
+        boolean accepted = messageQueue.offer(notification);
+        if (!accepted) {
+            LOGGER.log(Level.WARNING, "Hàng đợi gửi tin của Client bị đầy, không thể gửi thông báo mới.");
         }
     }
 }

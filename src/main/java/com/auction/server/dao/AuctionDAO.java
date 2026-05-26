@@ -6,7 +6,6 @@ import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.Bidder;
 import com.auction.shared.model.entity.Item;
-import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.model.enums.ItemType;
 
@@ -19,11 +18,15 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * DAO cho Auction. Kết nối trực tiếp với MySQL trên Cloud.
  */
 public class AuctionDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(AuctionDAO.class.getName());
 
     // 1. HÀM THÊM MỚI (SAVE)
 
@@ -37,7 +40,7 @@ public class AuctionDAO {
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, auction.getId());
 
@@ -64,11 +67,12 @@ public class AuctionDAO {
             pstmt.setString(7, auction.getStatus() != null ? auction.getStatus().name() : AuctionStatus.OPEN.name());
 
             pstmt.executeUpdate();
-            System.out.println("xĐã lưu phiên đấu giá " + auction.getId() + " lên Cloud!");
+            LOGGER.log(Level.INFO, "Đã lưu phiên đấu giá {0} lên Database!", auction.getId());
 
         } catch (SQLIntegrityConstraintViolationException e) {
             // MySQL tự động chặn ID trùng lặp
-            throw new IllegalArgumentException("Từ chối thêm mới: Phiên đấu giá ID '" + auction.getId() + "' đã tồn tại!");
+            throw new IllegalArgumentException(
+                    "Từ chối thêm mới: Phiên đấu giá ID '" + auction.getId() + "' đã tồn tại!");
         } catch (SQLException e) {
             throw new DataPersistenceException("Lỗi hệ thống khi lưu Auction vào Database", e);
         }
@@ -86,7 +90,7 @@ public class AuctionDAO {
                 "WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, auction.getItem().getId());
             pstmt.setDouble(2, auction.getCurrentPrice());
@@ -105,7 +109,8 @@ public class AuctionDAO {
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected == 0) {
-                throw new EntityNotFoundException("Không thể cập nhật: Không tìm thấy phiên đấu giá ID '" + auction.getId() + "'");
+                throw new EntityNotFoundException(
+                        "Không thể cập nhật: Không tìm thấy phiên đấu giá ID '" + auction.getId() + "'");
             }
 
         } catch (SQLException e) {
@@ -117,51 +122,22 @@ public class AuctionDAO {
 
     public List<Auction> findAll() throws DataPersistenceException {
         List<Auction> auctions = new ArrayList<>();
-        String sql = "SELECT * FROM auctions";
+        // - Lỗi N+1 Query cũ: Dùng vòng lặp while(rs.next()) gọi thêm 2 câu SELECT
+        // (findById) làm chậm hệ thống.
+        // - Khắc phục: Sử dụng JOIN (INNER JOIN items, LEFT JOIN users) để lấy toàn bộ
+        // dữ liệu trong 1 câu truy vấn.
+        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username "
+                + "FROM auctions a "
+                + "JOIN items i ON a.item_id = i.id "
+                + "LEFT JOIN users u ON a.current_winner_id = u.id";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-
-            // Nhờ ItemDAO và UserDAO lấy hộ
-            ItemDAO itemDAO = new ItemDAO();
-            UserDAO userDAO = new UserDAO();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                Auction auction = new Auction();
-                auction.setId(rs.getString("id"));
-                auction.setCurrentPrice(rs.getDouble("current_price"));
-                auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
-
-                // Chuyển Timestamp từ Database ngược lại thành LocalDateTime
-                if (rs.getTimestamp("start_time") != null) {
-                    auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
-                }
-                if (rs.getTimestamp("end_time") != null) {
-                    auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
-                }
-
-                // --- Xử lý ghép nối Item ---
-                String itemId = rs.getString("item_id");
-                try {
-                    Item item = itemDAO.findById(itemId);
-                    auction.setItem(item);
-                } catch (EntityNotFoundException e) {
-                    System.err.println("Cảnh báo: Không tìm thấy Item gốc cho Auction " + auction.getId());
-                }
-
-                // --- Xử lý ghép nối Winner ---
-                String winnerId = rs.getString("current_winner_id");
-                if (winnerId != null) {
-                    try {
-                        User winner = userDAO.findById(winnerId);
-                        auction.setCurrentWinner((Bidder) winner);
-                    } catch (EntityNotFoundException e) {
-                        System.err.println("Cảnh báo: Không tìm thấy Winner cho Auction " + auction.getId());
-                    }
-                }
-
-                auctions.add(auction);
+                auctions.add(mapResultSetToAuction(rs));
             }
         } catch (SQLException e) {
             throw new DataPersistenceException("Lỗi khi đọc danh sách Auction từ DB", e);
@@ -176,43 +152,22 @@ public class AuctionDAO {
             throw new IllegalArgumentException("ID tìm kiếm không hợp lệ.");
         }
 
-        String sql = "SELECT * FROM auctions WHERE id = ?";
+        // Tối ưu N+1 Query tương tự như findAll
+        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username "
+                + "FROM auctions a "
+                + "JOIN items i ON a.item_id = i.id "
+                + "LEFT JOIN users u ON a.current_winner_id = u.id "
+                + "WHERE a.id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, id);
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    Auction auction = new Auction();
-                    auction.setId(rs.getString("id"));
-                    auction.setCurrentPrice(rs.getDouble("current_price"));
-
-                    if (rs.getTimestamp("start_time") != null) {
-                        auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
-                    }
-                    if (rs.getTimestamp("end_time") != null) {
-                        auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
-                    }
-                    auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
-
-                    // Sử dụng các DAO khác để load dữ liệu liên kết một cách đơn giản
-                    ItemDAO itemDAO = new ItemDAO();
-                    UserDAO userDAO = new UserDAO();
-
-                    auction.setItem(itemDAO.findById(rs.getString("item_id")));
-
-                    String winnerId = rs.getString("current_winner_id");
-                    if (winnerId != null) {
-                        try {
-                            auction.setCurrentWinner((Bidder) userDAO.findById(winnerId));
-                        } catch (Exception e) {
-                            System.err.println("Cảnh báo: Không tìm thấy Winner cho Auction " + auction.getId());
-                        }
-                    }
-
-                    return auction;
+                    return mapResultSetToAuction(rs);
                 } else {
                     throw new EntityNotFoundException("Không tìm thấy phiên đấu giá có ID: " + id);
                 }
@@ -228,7 +183,7 @@ public class AuctionDAO {
         String sql = "DELETE FROM auctions WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, id);
             int rowsAffected = pstmt.executeUpdate();
@@ -243,13 +198,8 @@ public class AuctionDAO {
     }
 
     // 6. LẤY CÁC PHIÊN ĐẤU GIÁ MỞ (getOpenAuctions)
-    /**
-     * Lấy danh sách tất cả các phiên đấu giá đang ở trạng thái OPEN.
-     * Dùng để khôi phục bộ đếm thời gian khi Server khởi động lại.
-     */
     public List<Auction> getOpenAuctions() {
         List<Auction> openAuctions = new ArrayList<>();
-        // Truy vấn kết nối bảng auctions với bảng items (để lấy thông tin món đồ) và bảng users (nếu có người đang thắng)
         String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
                 + "u.username as winner_username "
                 + "FROM auctions a "
@@ -258,47 +208,55 @@ public class AuctionDAO {
                 + "WHERE a.status = 'OPEN'";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                Auction auction = new Auction();
-                auction.setId(rs.getString("id"));
-                auction.setCurrentPrice(rs.getDouble("current_price"));
-                auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
-                auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
-                auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
-
-                // 1. Lấy các giá trị cần thiết từ Database ra các biến trung gian
-                String itemTypeStr = rs.getString("item_type");
-                ItemType itemType = ItemType.valueOf(itemTypeStr);
-                String itemId = rs.getString("item_id");
-                String itemName = rs.getString("item_name");
-                double startingPrice = rs.getDouble("starting_price");
-
-                // 2. Gọi ItemFactory
-                Item item = ItemFactory.createItem(itemType, itemId, itemName, startingPrice);
-                item.setDescription(rs.getString("item_desc"));
-
-                auction.setItem(item);
-
-                // Khôi phục thông tin người thắng hiện tại (nếu có)
-                String winnerId = rs.getString("current_winner_id");
-                if (winnerId != null) {
-                    Bidder winner = new Bidder();
-                    winner.setId(winnerId);
-                    winner.setName(rs.getString("winner_username"));
-                    auction.setCurrentWinner(winner);
-                }
-
-                openAuctions.add(auction);
+                openAuctions.add(mapResultSetToAuction(rs));
             }
 
         } catch (SQLException e) {
-            System.err.println("Lỗi khi lấy danh sách phiên đấu giá đang mở: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Lỗi khi lấy danh sách phiên đấu giá đang mở: " + e.getMessage(), e);
         }
 
         return openAuctions;
     }
 
+    // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
+    private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
+        Auction auction = new Auction();
+        auction.setId(rs.getString("id"));
+        auction.setCurrentPrice(rs.getDouble("current_price"));
+        auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
+
+        if (rs.getTimestamp("start_time") != null) {
+            auction.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
+        }
+        if (rs.getTimestamp("end_time") != null) {
+            auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
+        }
+
+        // --- Xử lý ghép nối Item trực tiếp từ ResultSet JOIN ---
+        String itemTypeStr = rs.getString("item_type");
+        ItemType itemType = ItemType.valueOf(itemTypeStr);
+        String itemId = rs.getString("item_id");
+        String itemName = rs.getString("item_name");
+        double startingPrice = rs.getDouble("starting_price");
+
+        Item item = ItemFactory.createItem(itemType, itemId, itemName, startingPrice);
+        item.setDescription(rs.getString("item_desc"));
+
+        auction.setItem(item);
+
+        // --- Xử lý ghép nối Winner trực tiếp từ ResultSet JOIN ---
+        String winnerId = rs.getString("current_winner_id");
+        if (winnerId != null) {
+            Bidder winner = new Bidder();
+            winner.setId(winnerId);
+            winner.setName(rs.getString("winner_username"));
+            auction.setCurrentWinner(winner);
+        }
+
+        return auction;
+    }
 }

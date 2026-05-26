@@ -2,6 +2,7 @@ package com.auction.shared.model.entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 1. Lớp Entity là một Abstract Class (lớp trừu tượng) đóng vai trò là lớp cha (Base Class) cho toàn bộ hệ thống.
@@ -15,6 +16,8 @@ public abstract class Entity implements Serializable {
 
     public Entity() {
         this.createdAt = LocalDateTime.now();
+        // Sinh ID tự động với tiền tố thời gian (hex) giúp đảm bảo tính tuần tự khi lưu Database
+        this.id = Long.toHexString(System.currentTimeMillis()) + "-" + UUID.randomUUID().toString();
     }
 
     public String getId() {

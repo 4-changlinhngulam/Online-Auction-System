@@ -23,32 +23,32 @@ import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.protocol.Response;
 
-
-/** Singleton – Quản lý toàn bộ phiên đấu giá. Xử lý concurrency + Observer notify. */
+// - Design Pattern: Singleton (Đảm bảo duy nhất 1 phiên bản quản lý đấu giá, tránh xung đột dữ liệu).
+// - Design Pattern: Observer (AuctionManager đóng vai trò Subject, quản lý danh sách ClientHandler là các Observer để push thông báo real-time).
 public class AuctionManager {
-    // 1. Singleton: Đảm bảo chỉ có 1 Manager duy nhất trên toàn Server
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger
+            .getLogger(AuctionManager.class.getName());
     private static volatile AuctionManager instance;
 
-    // 2. Lưu trữ các phiên đấu giá đang chạy.
     private final Map<String, Auction> activeAuctions;
 
-    // 3. Danh sách các Client đang theo dõi đấu giá (Dùng cho Observer Pattern)
     private final List<BidObserver> observers;
 
-    // 4. Kết nối với Database
     private final AuctionDAO auctionDAO;
 
-    // Khởi tạo một bộ đếm giờ với luồng chạy ngầm (pool size = 5)
     private final ScheduledExecutorService scheduler;
+
     private AuctionManager() {
         this.activeAuctions = new ConcurrentHashMap<>();
         this.observers = new ArrayList<>();
         this.auctionDAO = new AuctionDAO();
         this.scheduler = Executors.newScheduledThreadPool(5);
     }
-    // Phương thức public static để lấy thể hiện duy nhất (Double-checked locking)
+
     public static AuctionManager getInstance() {
-        AuctionManager auctionManager = instance; // lấy dữ liệu instance vào biến cục bộ để tối ưu bộ nhớ
+        AuctionManager auctionManager = instance;
+        // Double-checked locking giúp tăng hiệu năng (chỉ block luồng khi instance thực
+        // sự null).
         if (auctionManager == null) {
             synchronized (AuctionManager.class) {
                 auctionManager = instance;
@@ -59,13 +59,11 @@ public class AuctionManager {
         }
         return auctionManager;
     }
+
     public void addAuction(Auction auction) {
         activeAuctions.put(auction.getId(), auction);
     }
 
-    /**
-     * [Fix 2] Nạp lại các phiên đấu giá đang mở từ Database khi Server khởi động
-     */
     public void init() {
         System.out.println("Đang khôi phục các phiên đấu giá từ Database...");
         List<Auction> openAuctions = auctionDAO.getOpenAuctions();
@@ -89,7 +87,6 @@ public class AuctionManager {
             }
         }
     }
-    // OBSERVER PATTERN (CƠ CHẾ THÔNG BÁO PUSH)
 
     public void addObserver(BidObserver observer) {
         if (observer != null) {
@@ -109,14 +106,13 @@ public class AuctionManager {
         }
     }
 
-    // Hàm này sẽ lặp qua tất cả các Client đang kết nối và báo cho họ biết có giá mới
     private void notifyObservers(Auction updatedAuction) {
-        String winnerId = (updatedAuction.getCurrentWinner() != null) 
-                          ? updatedAuction.getCurrentWinner().getId() : "";
+        String winnerId = (updatedAuction.getCurrentWinner() != null)
+                ? updatedAuction.getCurrentWinner().getId()
+                : "";
 
         List<BidObserver> copyList;
         synchronized (observers) {
-            // Tạo bản sao để tránh ConcurrentModificationException khi duyệt
             copyList = new ArrayList<>(observers);
         }
 
@@ -124,27 +120,21 @@ public class AuctionManager {
             try {
                 observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
             } catch (Exception e) {
-                System.err.println("Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage());
+                LOGGER.log(java.util.logging.Level.SEVERE,
+                        "Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage(), e);
                 removeObserver(observer);
             }
         }
     }
 
-    /**
-     * Lên lịch tự động kết thúc phiên đấu giá
-     */
     public void scheduleAuctionEnd(Auction auction) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
-
-        // Tính khoảng thời gian từ bây giờ đến lúc kết thúc
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {
-            // Nếu thời gian kết thúc ở trong quá khứ, đóng phiên ngay lập tức
             endAuction(auction.getId());
         } else {
-            // Đặt báo thức: Lệnh () -> endAuction(...) sẽ được chạy sau "delayInMillis"
             scheduler.schedule(() -> {
                 System.out.println("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
                 endAuction(auction.getId());
@@ -152,17 +142,16 @@ public class AuctionManager {
         }
     }
 
-    /**
-     * Xử lý một lượt đặt giá mới (Real-time).
-     * BẮT BUỘC dùng 'synchronized' để chặn nhiều người đặt giá cùng lúc.
-     */
     public Response processNewBid(String auctionId, String bidderId, double bidAmount) {
         Auction auction = activeAuctions.get(auctionId);
         if (auction == null) {
             return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        // Đồng bộ hóa trên chính đối tượng phiên đấu giá này để tránh Race Condition đặt giá
+        // Bắt buộc dùng `synchronized (auction)` để ngăn chặn Race Condition khi 2
+        // client đặt giá cùng 1 mili-giây.
+        // Chỉ block phiên đấu giá hiện tại, không block toàn bộ AuctionManager -> Tối
+        // ưu hiệu suất.
         synchronized (auction) {
             Bidder bidder;
             try {
@@ -176,14 +165,12 @@ public class AuctionManager {
                 return new Response(false, "Lỗi xác thực người dùng: " + e.getMessage(), null);
             }
 
-            // 1. ỦY QUYỀN cho Auction tự xử lý logic kiểm tra giá (Bypass đồng bộ hóa ở Entity)
             boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
 
             if (!isValidBid) {
                 return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
             }
 
-            // 2. NẾU HỢP LỆ -> GHI DATABASE
             try {
                 BidTransaction transaction = new BidTransaction();
                 transaction.setAuctionId(auctionId);
@@ -191,19 +178,16 @@ public class AuctionManager {
                 transaction.setAmount(bidAmount);
 
                 BidTransactionDAO bidDao = new BidTransactionDAO();
-                bidDao.save(transaction); // Lưu lịch sử
+                bidDao.save(transaction);
+                auctionDAO.update(auction);
 
-                auctionDAO.update(auction); // Lưu giá mới của phiên
-
-                // 3. THÔNG BÁO CHO CÁC CLIENT KHÁC
                 notifyObservers(auction);
 
                 System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
                 return new Response(true, "Đặt giá thành công!", null);
 
             } catch (DataPersistenceException | EntityNotFoundException e) {
-                System.err.println("Lỗi Database khi lưu Bid: " + e.getMessage());
-                // Hoàn tác RAM đơn giản cho bài tập lớn (revert giá trị)
+                LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi Database khi lưu Bid: " + e.getMessage(), e);
                 List<BidTransaction> history = auction.getBidHistory();
                 if (history != null && !history.isEmpty()) {
                     history.remove(history.size() - 1);
@@ -223,4 +207,3 @@ public class AuctionManager {
         }
     }
 }
-

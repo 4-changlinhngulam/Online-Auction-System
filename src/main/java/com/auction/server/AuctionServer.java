@@ -10,9 +10,11 @@ import com.auction.server.service.AuctionManager;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Entry point của Server. Lắng nghe kết nối và tạo ClientHandler cho mỗi client bằng Thread Pool.
+ * Lớp chính chịu trách nhiệm khởi chạy Server. Lắng nghe kết nối và tạo ClientHandler cho mỗi client bằng Thread Pool.
  */
 public class AuctionServer {
     private static final int PORT = 9999;
@@ -46,8 +48,7 @@ public class AuctionServer {
                 THREAD_POOL.submit(new ClientHandler(socket));
             }
         } catch (IOException e) {
-            System.err.println("Lỗi khởi động server: " + e.getMessage());
-            e.printStackTrace();
+            Logger.getLogger(AuctionServer.class.getName()).log(Level.SEVERE, "Lỗi khởi động server: " + e.getMessage(), e);
         }
     }
 }

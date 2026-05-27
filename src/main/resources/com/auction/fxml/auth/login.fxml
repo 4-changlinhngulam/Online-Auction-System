@@ -35,7 +35,7 @@
 
                <!-- EMAIL -->
                <Label maxWidth="Infinity" styleClass="label" text="EMAIL" />
-               <TextField fx:id="emailField" maxWidth="Infinity" promptText="Nhập email của bạn" styleClass="input-field" />
+               <TextField fx:id="emailField" maxWidth="Infinity" promptText="Nhập tên đăng nhập" styleClass="input-field" />
 
                <!-- PASSWORD -->
                <Label maxWidth="Infinity" styleClass="label" text="PASSWORD" />

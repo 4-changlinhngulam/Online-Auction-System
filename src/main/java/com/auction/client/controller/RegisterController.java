@@ -1,5 +1,10 @@
 package com.auction.client.controller;
-
+import com.auction.client.network.ServerConnection;
+import com.auction.shared.model.entity.Bidder;
+import com.auction.shared.model.entity.Seller;
+import com.auction.shared.model.entity.User;
+import com.auction.shared.protocol.Request;
+import com.auction.shared.protocol.RequestType;
 import com.auction.client.util.SceneManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
@@ -50,13 +55,36 @@ public class RegisterController {
             errorLabel.setText("Email không hợp lệ!");
             return;
         }
+        // 1. Tạo đối tượng User tương ứng với Role
+        User newUser;
+        if ("SELLER".equals(role)) {
+            newUser = new Seller(fullName, password, email);
+        } else {
+            newUser = new Bidder(fullName, password, email);
+        }
 
-        // --- MOCK MODE ---
-        errorLabel.setStyle("-fx-text-fill: #00ff00;");
-        errorLabel.setText("Đăng ký thành công!");
+        // 2. Tạo Request đóng gói dữ liệu
+        Request req = new Request(RequestType.REGISTER, newUser);
 
-        // TODO: Gửi Request(REGISTER) lên Server
-        // TODO: Chuyển về login sau khi đăng ký thành công
+        // 3. Gửi bất đồng bộ lên Server
+        ServerConnection.getInstance().sendRequestAsync(req, response -> {
+            if (response.isSuccess()) {
+                errorLabel.setStyle("-fx-text-fill: #00ff00;");
+                errorLabel.setText("Đăng ký thành công! Đang chuyển về đăng nhập...");
+
+                // Đợi 1 chút rồi chuyển về Login
+                new Thread(() -> {
+                    try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+                    javafx.application.Platform.runLater(() -> handleBackToLogin());
+                }).start();
+            } else {
+                errorLabel.setStyle("-fx-text-fill: #ff6b6b;");
+                errorLabel.setText(response.getMessage()); // Báo lỗi (VD: Trùng username)
+            }
+        });
+
+
+
     }
 
     @FXML

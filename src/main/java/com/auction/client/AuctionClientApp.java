@@ -1,5 +1,6 @@
 package com.auction.client;
 
+import com.auction.client.network.ServerConnection;
 import com.auction.client.util.SceneManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -16,10 +17,12 @@ public class AuctionClientApp {
     public static class MainApp extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            // Bước 1: Đăng ký stage vào SceneManager
+            // Bước 1: Khởi tạo kết nối tới Server
+            ServerConnection.getInstance().connect();
+            // Bước 2: Đăng ký stage vào SceneManager
             SceneManager.setPrimaryStage(primaryStage);
 
-            // Bước 2: Load màn hình Login đầu tiên
+            // Bước 3: Load màn hình Login đầu tiên
             Parent root = FXMLLoader.load(
                     getClass().getResource(
                             "/com/auction/fxml/auth/login.fxml"

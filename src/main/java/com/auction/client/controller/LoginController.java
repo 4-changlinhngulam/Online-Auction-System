@@ -1,5 +1,10 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ServerConnection;
+import com.auction.client.util.SessionManager;
+import com.auction.shared.model.entity.User;
+import com.auction.shared.protocol.Request;
+import com.auction.shared.protocol.RequestType;
 import com.auction.client.util.SceneManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -42,15 +47,24 @@ public class LoginController {
             return;
         }
 
-        // Bước 4: Kiểm tra đúng/sai (tạm thời dùng mock)
-        if (email.equals("admin@gmail.com") && password.equals("123")) {
-            errorLabel.setStyle("-fx-text-fill: #00ff00;");
-            errorLabel.setText("Đăng nhập thành công!");
-            SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
-        } else {
-            errorLabel.setStyle("-fx-text-fill: #ff6b6b;");
-            errorLabel.setText("Sai email hoặc mật khẩu!");
-        }
+        String[] credentials = {email, password};
+
+        Request req = new Request(RequestType.LOGIN, credentials);
+
+        ServerConnection.getInstance().sendRequestAsync(req, response -> {
+            if (response.isSuccess()) {
+                // Đăng nhập thành công -> Lưu User vào Session
+                User loggedInUser = (User) response.getData();
+                SessionManager.getInstance().setCurrentUser(loggedInUser);
+
+                errorLabel.setStyle("-fx-text-fill: #00ff00;");
+                errorLabel.setText("Đăng nhập thành công!");
+                SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
+            } else {
+                errorLabel.setStyle("-fx-text-fill: #ff6b6b;");
+                errorLabel.setText(response.getMessage()); // Hiển thị lỗi "Sai mật khẩu" từ Server
+            }
+        });
     }
 
     @FXML

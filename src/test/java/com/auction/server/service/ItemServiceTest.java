@@ -26,7 +26,6 @@ class ItemServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Tự tiêm DAO giả vào
         itemService = new ItemService(itemDAO);
     }
 

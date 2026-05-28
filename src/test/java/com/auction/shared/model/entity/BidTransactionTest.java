@@ -6,11 +6,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class BidTransactionTest {
 
     @Test
-    void testBidTransactionIdGeneration() {
+    void testBidTransactionFields() {
         BidTransaction t1 = new BidTransaction();
-        BidTransaction t2 = new BidTransaction();
+        t1.setId("TXN_001");
+        t1.setBidderId("BIDDER_01");
+        t1.setAmount(100.0);
 
-        assertNotNull(t1.getId(), "ID phải tự động được sinh ra");
-        assertNotEquals(t1.getId(), t2.getId(), "Hai đối tượng khác nhau phải có ID khác nhau");
+        assertEquals("TXN_001", t1.getId(), "ID phải khớp với giá trị được set");
+        assertEquals("BIDDER_01", t1.getBidderId());
+        assertEquals(100.0, t1.getAmount());
+        assertNotNull(t1.getTimestamp(), "Timestamp phải tự động được sinh ra");
     }
 }

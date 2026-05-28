@@ -128,8 +128,17 @@ public class AuctionManager {
     }
 
     public void scheduleAuctionEnd(Auction auction) {
-        LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
+
+        // Nếu end_time bị null trong DB → kết thúc phiên ngay lập tức thay vì crash
+        if (endTime == null) {
+            LOGGER.warning("Phiên đấu giá " + auction.getId()
+                    + " không có end_time, tự động kết thúc ngay.");
+            endAuction(auction.getId());
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {

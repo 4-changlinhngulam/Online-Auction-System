@@ -89,7 +89,11 @@ public class RegisterController {
 
                 // Chờ 1 giây rồi chuyển về login
                 new Thread(() -> {
-                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ignored) {
+                        // ignored
+                    }
                     javafx.application.Platform.runLater(() ->
                             SceneManager.switchTo("/com/auction/fxml/auth/login.fxml")
                     );

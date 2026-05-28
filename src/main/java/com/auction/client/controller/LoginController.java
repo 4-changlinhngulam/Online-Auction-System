@@ -6,7 +6,6 @@ import com.auction.client.util.SessionManager;
 import com.auction.shared.model.entity.User;
 import com.auction.shared.protocol.Request;
 import com.auction.shared.protocol.RequestType;
-import com.auction.shared.protocol.Response;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;

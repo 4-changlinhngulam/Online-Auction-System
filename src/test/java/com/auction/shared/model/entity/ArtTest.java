@@ -21,4 +21,3 @@ class ArtTest {
         assertEquals("PENDING", art.getStatus());
     }
 }
-1

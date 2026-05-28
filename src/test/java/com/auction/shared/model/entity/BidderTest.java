@@ -9,15 +9,12 @@ class BidderTest {
 
     @Test
     void testBidderCreation() {
-        // Given
         String name = "testbidder";
         String password = "password123";
         String email = "bidder@example.com";
 
-        // When
         Bidder bidder = new Bidder(name, password, email);
 
-        // Then
         assertNotNull(bidder);
         assertEquals(name, bidder.getName());
         assertEquals(password, bidder.getPassword());

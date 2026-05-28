@@ -47,7 +47,7 @@ public class AuctionClientApp {
             Scene scene = new Scene(root);
             primaryStage.setScene(scene);
             primaryStage.setTitle("Hệ thống Đấu Giá Trực Tuyến");
-            primaryStage.setResizable(false); // cố định kích thước
+///            primaryStage.setResizable(false); // cố định kích thước
             primaryStage.show();
         }
     }

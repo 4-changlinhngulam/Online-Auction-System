@@ -24,6 +24,8 @@ public class SceneManager {
                     SceneManager.class.getResource(fxmlPath)
             );
             primaryStage.setScene(new Scene(root));
+            // Thêm dòng này để cho phép dùng chuột kéo giãn cửa sổ
+            primaryStage.setResizable(true);
             primaryStage.show();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Lỗi chuyển màn hình: " + e.getMessage(), e);

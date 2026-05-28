@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
  * 1. Lớp BidTransaction có nhiệm vụ ghi lại dấu vết (log) của từng lượt đặt giá cụ thể.
  * 2. Lưu trữ thông tin chi tiết
  * 3. Lớp này đáp ứng yêu cầu vẽ lại biểu đồ giá theo thời gian và lưu trữ lịch sử minh bạch cho hệ thống.
- * 4. Phương thức static `generateId()` giúp tạo ra chuỗi định danh duy nhất (có thể sử dụng UUID) cho mỗi phiên giao dịch.
+ * 4. ID tự động được sinh từ lớp cha (Entity) bao gồm Timestamp để đảm bảo tính tuần tự.
  */
 public class BidTransaction extends Entity {
     private String bidderId;
@@ -15,12 +15,8 @@ public class BidTransaction extends Entity {
     private LocalDateTime timestamp;
 
     public BidTransaction() {
+        super(); // Gọi constructor lớp cha để sinh ID tuần tự
         this.timestamp = LocalDateTime.now();
-    }
-
-    // Phương thức tĩnh để tạo ID ngẫu nhiên cho giao dịch
-    private static String generateId() {
-        return java.util.UUID.randomUUID().toString();
     }
 
     // Getters và Setters
@@ -57,6 +53,7 @@ public class BidTransaction extends Entity {
     }
 
     public void printInfo() {
-        // In chi tiết giao dịch
+        System.out.printf("Giao dịch [%s]: Phiên %s - User %s đã đặt mức giá $%.2f vào lúc %s%n",
+                getId(), auctionId, bidderId, amount, timestamp);
     }
 }

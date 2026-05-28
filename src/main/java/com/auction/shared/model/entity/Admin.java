@@ -19,10 +19,6 @@ public class Admin extends User {
         return "ADMIN";
     }
 
-    @Override
-    public void showMenu() {
-    }
-
     public void banUser(User targetUser) {
         if (targetUser != null && !(targetUser instanceof Admin)) {
             System.out.println("User " + targetUser.getUsername() + " has been restricted.");

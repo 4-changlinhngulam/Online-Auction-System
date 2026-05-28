@@ -1,10 +1,13 @@
 package com.auction.server.dao;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseConnection {
 
@@ -21,8 +24,10 @@ public class DatabaseConnection {
             Properties prop = new Properties();
 
             if (input == null) {
-                System.err.println("LỖI NGHIÊM TRỌNG: Không tìm thấy file application.properties trong thư mục resources!");
-                System.err.println("Vui lòng copy file application.properties.example, đổi tên và điền mật khẩu.");
+                Logger.getLogger(DatabaseConnection.class.getName())
+                      .log(Level.SEVERE, "LỖI NGHIÊM TRỌNG: Không tìm thấy file application.properties! "
+                                       + "Vui lòng copy file application.properties.example, "
+                                       + "đổi tên và điền mật khẩu.");
             } else {
                 // Tải thông tin từ file properties vào bộ nhớ
                 prop.load(input);
@@ -32,8 +37,8 @@ public class DatabaseConnection {
                 PASSWORD = prop.getProperty("db.password");
             }
 
-        } catch (Exception ex) {
-            System.err.println("Lỗi khi đọc file cấu hình Database: " + ex.getMessage());
+        } catch (IOException ex) {
+            Logger.getLogger(DatabaseConnection.class.getName()).log(Level.SEVERE, "Lỗi khi đọc file cấu hình Database: " + ex.getMessage(), ex);
         }
     }
 

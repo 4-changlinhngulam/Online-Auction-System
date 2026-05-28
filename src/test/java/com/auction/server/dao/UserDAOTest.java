@@ -80,6 +80,7 @@ class UserDAOTest {
         assertEquals("User và ID không được phép null", ex1.getMessage());
 
         User userWithoutId = new Bidder();
+        userWithoutId.setId(null);
         IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class, () -> userDAO.save(userWithoutId));
         assertEquals("User và ID không được phép null", ex2.getMessage());
     }

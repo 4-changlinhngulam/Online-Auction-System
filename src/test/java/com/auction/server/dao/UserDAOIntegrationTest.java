@@ -30,7 +30,8 @@ class UserDAOIntegrationTest {
                 "username VARCHAR(50) UNIQUE, " +
                 "password VARCHAR(255), " +
                 "email VARCHAR(100), " +
-                "role VARCHAR(20))");
+                "role VARCHAR(20), " +
+                "status VARCHAR(20))");
         stmt.execute("TRUNCATE TABLE users");
     }
 

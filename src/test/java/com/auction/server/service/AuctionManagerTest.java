@@ -1,0 +1,214 @@
+package com.auction.server.service;
+
+import com.auction.server.dao.*;
+import com.auction.shared.model.entity.*;
+import com.auction.shared.model.enums.*;
+import com.auction.shared.protocol.Response;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.sql.Connection;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class AuctionManagerTest {
+
+    private AuctionManager auctionManager;
+    private UserDAO userDAO;
+    private ItemDAO itemDAO;
+    private AuctionDAO auctionDAO;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        auctionManager = AuctionManager.getInstance();
+        userDAO = new UserDAO();
+        itemDAO = new ItemDAO();
+        auctionDAO = new AuctionDAO();
+
+        Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Statement stmt = conn.createStatement()) {
+            // Cấu hình cấu trúc các bảng trong Database H2
+            stmt.execute("CREATE TABLE IF NOT EXISTS users (" +
+                    "id VARCHAR(50) PRIMARY KEY, " +
+                    "username VARCHAR(50) UNIQUE, " +
+                    "password VARCHAR(255), " +
+                    "email VARCHAR(100), " +
+                    "role VARCHAR(20), " +
+                    "status VARCHAR(20))");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS items (" +
+                    "id VARCHAR(50) PRIMARY KEY, " +
+                    "name VARCHAR(50), " +
+                    "description VARCHAR(255), " +
+                    "starting_price DOUBLE, " +
+                    "item_type VARCHAR(20), " +
+                    "warranty_months INT, " +
+                    "mileage BIGINT)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS auctions (" +
+                    "id VARCHAR(50) PRIMARY KEY, " +
+                    "item_id VARCHAR(50), " +
+                    "current_price DOUBLE, " +
+                    "current_winner_id VARCHAR(50), " +
+                    "start_time TIMESTAMP, " +
+                    "end_time TIMESTAMP, " +
+                    "status VARCHAR(20))");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS bid_history (" +
+                    "id VARCHAR(50) PRIMARY KEY, " +
+                    "auction_id VARCHAR(50), " +
+                    "bidder_id VARCHAR(50), " +
+                    "amount DOUBLE, " +
+                    "timestamp TIMESTAMP)");
+
+            stmt.execute("TRUNCATE TABLE bid_history");
+            stmt.execute("TRUNCATE TABLE auctions");
+            stmt.execute("TRUNCATE TABLE items");
+            stmt.execute("TRUNCATE TABLE users");
+        }
+    }
+
+    @Test
+    @DisplayName("Test đăng ký Auto-bid thành công")
+    void testRegisterAutoBid() throws Exception {
+        // Tạo sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_01");
+        item.setName("Laptop");
+        item.setStartingPrice(1000.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_01");
+        auction.setItem(item);
+        auction.setCurrentPrice(1000.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        Response response = auctionManager.registerAutoBid("AUC_AM_01", "USER_AM_01", 1500.0);
+        assertTrue(response.isSuccess());
+        assertEquals("Cài đặt Auto-bid thành công.", response.getMessage());
+
+        // Test đăng ký Auto-bid cho phiên đấu giá không tồn tại
+        Response failResponse = auctionManager.registerAutoBid("INVALID_AUC", "USER_AM_01", 1500.0);
+        assertFalse(failResponse.isSuccess());
+    }
+
+    @Test
+    @DisplayName("Test xử lý đặt giá mới thành công")
+    void testProcessNewBid_Success() throws Exception {
+        // Lưu bidder vào Database
+        Bidder bidder = new Bidder("bidder1", "pass", "b1@gmail.com");
+        bidder.setId("BIDDER_AM_01");
+        userDAO.save(bidder);
+
+        // Lưu sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_02");
+        item.setName("Phone");
+        item.setStartingPrice(500.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_02");
+        auction.setItem(item);
+        auction.setCurrentPrice(500.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // Xử lý một lượt đặt giá hợp lệ
+        Response response = auctionManager.processNewBid("AUC_AM_02", "BIDDER_AM_01", 600.0);
+        assertTrue(response.isSuccess());
+        assertEquals("Đặt giá thành công!", response.getMessage());
+
+        // Kiểm tra cơ sở dữ liệu đã được cập nhật
+        Auction updated = auctionDAO.findById("AUC_AM_02");
+        assertEquals(600.0, updated.getCurrentPrice());
+        assertEquals("BIDDER_AM_01", updated.getCurrentWinner().getId());
+    }
+
+    @Test
+    @DisplayName("Test logic chống nhảy giá phút chót - Anti-sniping (kéo dài thời gian đấu giá)")
+    void testAntiSnipingLogic() throws Exception {
+        Bidder bidder = new Bidder("bidder2", "pass", "b2@gmail.com");
+        bidder.setId("BIDDER_AM_02");
+        userDAO.save(bidder);
+
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_03");
+        item.setName("Tablet");
+        item.setStartingPrice(300.0);
+        itemDAO.save(item);
+
+        // Tạo phiên đấu giá kết thúc sau 1 phút (ít hơn 3 phút, tức 180 giây)
+        LocalDateTime initialEndTime = LocalDateTime.now().plusMinutes(1);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_03");
+        auction.setItem(item);
+        auction.setCurrentPrice(300.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now().minusHours(1));
+        auction.setEndTime(initialEndTime);
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // Đặt giá thầu
+        Response response = auctionManager.processNewBid("AUC_AM_03", "BIDDER_AM_02", 350.0);
+        assertTrue(response.isSuccess());
+
+        // Kiểm tra xem thời gian kết thúc có được kéo dài thêm 3 phút (180 giây) hay không
+        Auction updated = auctionDAO.findById("AUC_AM_03");
+        assertTrue(updated.getEndTime().isAfter(initialEndTime));
+    }
+
+    @Test
+    @DisplayName("Test kết thúc phiên đấu giá và thông báo tới các observer")
+    void testEndAuction() throws Exception {
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_04");
+        item.setName("Watch");
+        item.setStartingPrice(200.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_04");
+        auction.setItem(item);
+        auction.setCurrentPrice(200.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // Đăng ký observer giả lập
+        final boolean[] notified = {false};
+        BidObserver observer = (item1, currentPrice, winnerId, endTime) -> {
+            notified[0] = true;
+        };
+        auctionManager.addObserver(observer);
+
+        // Kết thúc phiên đấu giá
+        auctionManager.endAuction("AUC_AM_04");
+
+        // Kiểm chứng trạng thái
+        Auction updated = auctionDAO.findById("AUC_AM_04");
+        assertEquals(AuctionStatus.FINISHED, updated.getStatus());
+        assertTrue(notified[0]);
+
+        // Dọn dẹp và hủy đăng ký observer
+        auctionManager.removeObserver(observer);
+    }
+}

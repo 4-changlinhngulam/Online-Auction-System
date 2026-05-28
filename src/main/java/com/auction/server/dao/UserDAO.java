@@ -18,7 +18,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.logging.Logger;
+
 public class UserDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(UserDAO.class.getName());
 
     // 1. THÊM MỚI USER (SAVE)
 
@@ -49,7 +53,7 @@ public class UserDAO {
             pstmt.setString(6, user.getStatus().name());
 
             pstmt.executeUpdate();
-            System.out.println("Đã lưu User " + user.getUsername() + " lên Database!");
+            LOGGER.info("Đã lưu User " + user.getUsername() + " lên Database!");
 
         } catch (SQLIntegrityConstraintViolationException e) {
             throw new IllegalArgumentException("Username hoặc ID đã tồn tại trong hệ thống!");

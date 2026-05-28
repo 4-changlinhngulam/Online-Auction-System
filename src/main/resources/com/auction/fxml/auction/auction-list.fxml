@@ -17,8 +17,9 @@
             <Label text="🏆 Đấu Giá Trực Tuyến" styleClass="navbar-brand"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="Trang chủ" styleClass="nav-btn" onAction="#goToAuctionList"/>
-            <Button text="Sản phẩm của tôi" styleClass="nav-btn" onAction="#goToMyProducts"/>
-            <Button text="Tạo phiên đấu giá" styleClass="nav-btn-accent" onAction="#goToCreateAuction"/>
+            <Button fx:id="btnMyProducts" text="Sản phẩm của tôi" styleClass="nav-btn" onAction="#goToMyProducts"/>
+            <Button fx:id="btnCreateAuction" text="Tạo phiên đấu giá" styleClass="nav-btn-accent" onAction="#goToCreateAuction"/>
+            <Button text="Hồ sơ cá nhân" styleClass="nav-btn" onAction="#goToProfile"/>
             <Button text="Đăng xuất" styleClass="nav-btn" onAction="#handleLogout"/>
         </HBox>
     </top>

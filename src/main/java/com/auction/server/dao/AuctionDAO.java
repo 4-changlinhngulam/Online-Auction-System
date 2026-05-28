@@ -205,7 +205,7 @@ public class AuctionDAO {
                 + "FROM auctions a "
                 + "JOIN items i ON a.item_id = i.id "
                 + "LEFT JOIN users u ON a.current_winner_id = u.id "
-                + "WHERE a.status = 'OPEN'";
+                + "WHERE a.status IN ('OPEN', 'RUNNING')";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql);

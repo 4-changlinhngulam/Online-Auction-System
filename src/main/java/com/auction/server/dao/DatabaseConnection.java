@@ -10,6 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DatabaseConnection {
+    private static final Logger LOGGER = Logger.getLogger(DatabaseConnection.class.getName());
 
     private static String URL;
     private static String USER;
@@ -55,7 +56,7 @@ public class DatabaseConnection {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Đã kết nối thành công tới Database qua cấu hình file!");
+            LOGGER.info("Đã kết nối thành công tới Database qua cấu hình file!");
             return connection;
         } catch (ClassNotFoundException e) {
             throw new SQLException("Không tìm thấy MySQL Driver!", e);

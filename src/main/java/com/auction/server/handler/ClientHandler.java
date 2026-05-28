@@ -129,6 +129,7 @@ public class ClientHandler implements Runnable, BidObserver {
             case BAN_USER -> processBanUser(req);
             case GET_ALL_USERS -> userService.getAllUsers();
             case SUBSCRIBE_AUCTION -> processSubscribeAuction(req);
+            case SETUP_AUTO_BID -> processSetupAutoBid(req);
 
             default -> Response.error("RequestType không được hỗ trợ: " + req.getType());
         };
@@ -303,11 +304,23 @@ public class ClientHandler implements Runnable, BidObserver {
         return new Response(true, "Đăng ký nhận thông báo đấu giá thành công", null);
     }
 
+    private Response processSetupAutoBid(Request req) {
+        try {
+            Object[] data = (Object[]) req.getPayload();
+            String auctionId = (String) data[0];
+            String bidderId = (String) data[1];
+            double maxAmount = (Double) data[2];
+            return AuctionManager.getInstance().registerAutoBid(auctionId, bidderId, maxAmount);
+        } catch (Exception e) {
+            return Response.error("Dữ liệu cấu hình Auto-bid không hợp lệ: " + e.getMessage());
+        }
+    }
+
     // --- IMPLEMENTATION CHO BID OBSERVER ---
 
     @Override
-    public void update(Item item, double newPrice, String lastBidderId) {
-        Object[] updateData = new Object[] { item, newPrice, lastBidderId };
+    public void update(Item item, double newPrice, String lastBidderId, java.time.LocalDateTime newEndTime) {
+        Object[] updateData = new Object[] { item, newPrice, lastBidderId, newEndTime };
         Response notification = new Response(true, "NOTIFICATION_NEW_BID", updateData);
 
         // Đẩy thông báo vào hàng đợi (non-blocking)

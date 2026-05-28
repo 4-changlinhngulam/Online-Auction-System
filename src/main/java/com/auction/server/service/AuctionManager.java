@@ -31,6 +31,8 @@ public class AuctionManager {
     private static volatile AuctionManager instance;
 
     private final Map<String, Auction> activeAuctions;
+    private final Map<String, List<AutoBidConfig>> autoBids;
+    private final Map<String, java.util.concurrent.ScheduledFuture<?>> auctionTimers;
 
     private final List<BidObserver> observers;
 
@@ -40,6 +42,8 @@ public class AuctionManager {
 
     private AuctionManager() {
         this.activeAuctions = new ConcurrentHashMap<>();
+        this.autoBids = new ConcurrentHashMap<>();
+        this.auctionTimers = new ConcurrentHashMap<>();
         this.observers = new ArrayList<>();
         this.auctionDAO = new AuctionDAO();
         this.scheduler = Executors.newScheduledThreadPool(5);
@@ -62,6 +66,24 @@ public class AuctionManager {
 
     public void addAuction(Auction auction) {
         activeAuctions.put(auction.getId(), auction);
+    }
+
+    public Response registerAutoBid(String auctionId, String bidderId, double maxAmount) {
+        if (!activeAuctions.containsKey(auctionId)) {
+            return new Response(false, "Phiên đấu giá không tồn tại.", null);
+        }
+
+        List<AutoBidConfig> configs = autoBids.computeIfAbsent(auctionId, k -> new ArrayList<>());
+
+        synchronized (configs) {
+            // Loại bỏ cấu hình cũ của user này nếu có
+            configs.removeIf(config -> config.getBidderId().equals(bidderId));
+
+            // Thêm cấu hình mới
+            configs.add(new AutoBidConfig(bidderId, maxAmount));
+        }
+
+        return new Response(true, "Cài đặt Auto-bid thành công.", null);
     }
 
     public void init() {
@@ -118,7 +140,8 @@ public class AuctionManager {
 
         for (BidObserver observer : copyList) {
             try {
-                observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
+                observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId,
+                        updatedAuction.getEndTime());
             } catch (Exception e) {
                 LOGGER.log(java.util.logging.Level.SEVERE,
                         "Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage(), e);
@@ -129,6 +152,7 @@ public class AuctionManager {
 
     public void scheduleAuctionEnd(Auction auction) {
         LocalDateTime endTime = auction.getEndTime();
+<<<<<<< HEAD
 
         // Nếu end_time bị null trong DB → kết thúc phiên ngay lập tức thay vì crash
         if (endTime == null) {
@@ -139,15 +163,27 @@ public class AuctionManager {
         }
 
         LocalDateTime now = LocalDateTime.now();
+=======
+        if (endTime == null) {
+            return;
+        }
+>>>>>>> 6aa638ff572cf0079bbf9d2329e45bf90863bbdb
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {
             endAuction(auction.getId());
         } else {
-            scheduler.schedule(() -> {
+            java.util.concurrent.ScheduledFuture<?> existingTimer = auctionTimers.get(auction.getId());
+            if (existingTimer != null && !existingTimer.isDone()) {
+                existingTimer.cancel(false);
+            }
+
+            java.util.concurrent.ScheduledFuture<?> newTimer = scheduler.schedule(() -> {
                 System.out.println("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
                 endAuction(auction.getId());
             }, delayInMillis, TimeUnit.MILLISECONDS);
+
+            auctionTimers.put(auction.getId(), newTimer);
         }
     }
 
@@ -188,11 +224,26 @@ public class AuctionManager {
 
                 BidTransactionDAO bidDao = new BidTransactionDAO();
                 bidDao.save(transaction);
+
+                // --- ANTI-SNIPING LOGIC ---
+                if (auction.getEndTime() != null) {
+                    long remainingSeconds = Duration.between(LocalDateTime.now(), auction.getEndTime()).getSeconds();
+                    if (remainingSeconds >= 0 && remainingSeconds <= 180) { // Nếu còn dưới 3 phút
+                        auction.setEndTime(auction.getEndTime().plusSeconds(180));
+                        scheduleAuctionEnd(auction);
+                        System.out.println("Gia hạn phiên " + auctionId + " thêm 3 phút.");
+                    }
+                }
+
                 auctionDAO.update(auction);
 
                 notifyObservers(auction);
 
                 System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
+
+                // Trigger Auto-bidding
+                triggerAutoBids(auctionId, bidAmount, bidderId);
+
                 return new Response(true, "Đặt giá thành công!", null);
 
             } catch (DataPersistenceException | EntityNotFoundException e) {
@@ -215,4 +266,43 @@ public class AuctionManager {
             }
         }
     }
+<<<<<<< HEAD
 }
+=======
+
+    private void triggerAutoBids(String auctionId, double currentPrice, String lastBidderId) {
+        List<AutoBidConfig> configs = autoBids.get(auctionId);
+        if (configs == null || configs.isEmpty()) {
+            return;
+        }
+
+        AutoBidConfig bestAutoBid = null;
+
+        synchronized (configs) {
+            for (AutoBidConfig config : configs) {
+                if (config.getBidderId().equals(lastBidderId)) {
+                    continue; // Không tự bid đè lên chính mình
+                }
+
+                double nextBid = currentPrice + 50000; // MIN_INCREMENT = 50000
+                if (nextBid <= config.getMaxAmount()) {
+                    if (bestAutoBid == null || config.getMaxAmount() > bestAutoBid.getMaxAmount()) {
+                        bestAutoBid = config;
+                    }
+                }
+            }
+        }
+
+        if (bestAutoBid != null) {
+            final String bidderToAutoBid = bestAutoBid.getBidderId();
+            final double nextBid = currentPrice + 50000;
+            System.out.println("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
+
+            // Chạy bất đồng bộ để tránh đệ quy và tự chờ lock của chính mình
+            scheduler.execute(() -> {
+                processNewBid(auctionId, bidderToAutoBid, nextBid);
+            });
+        }
+    }
+}
+>>>>>>> 6aa638ff572cf0079bbf9d2329e45bf90863bbdb

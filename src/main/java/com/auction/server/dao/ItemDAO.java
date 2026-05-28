@@ -133,7 +133,8 @@ public class ItemDAO {
             throw new IllegalArgumentException("Loại Item không được hỗ trợ để lưu: " + item.getClass().getName());
         }
 
-        String sql = "INSERT INTO items (id, name, description, starting_price, item_type, warranty_months, mileage) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO items (id, name, description, starting_price, item_type, "
+                   + "warranty_months, mileage, owner_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -145,6 +146,9 @@ public class ItemDAO {
 
             // Ủy quyền map thuộc tính đặc thù cho Mapper
             mapper.mapToSave(pstmt, item);
+            
+            pstmt.setString(8, item.getOwnerId());
+            pstmt.setString(9, item.getStatus());
 
             pstmt.executeUpdate();
             LOGGER.log(Level.INFO, "Đã lưu Sản phẩm {0} lên Database!", item.getName());
@@ -167,7 +171,8 @@ public class ItemDAO {
             throw new IllegalArgumentException("Loại Item không được hỗ trợ để cập nhật: " + item.getClass().getName());
         }
 
-        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, item_type = ?, warranty_months = ?, mileage = ? WHERE id = ?";
+        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, "
+                   + "item_type = ?, warranty_months = ?, mileage = ?, owner_id = ?, status = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -179,7 +184,9 @@ public class ItemDAO {
             // Ủy quyền map thuộc tính đặc thù
             mapper.mapToUpdate(pstmt, item);
 
-            pstmt.setString(7, item.getId());
+            pstmt.setString(7, item.getOwnerId());
+            pstmt.setString(8, item.getStatus());
+            pstmt.setString(9, item.getId());
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected == 0) {
@@ -284,6 +291,8 @@ public class ItemDAO {
         item.setName(rs.getString("name"));
         item.setDescription(rs.getString("description"));
         item.setStartingPrice(rs.getDouble("starting_price"));
+        item.setOwnerId(rs.getString("owner_id"));
+        item.setStatus(rs.getString("status"));
 
         return item;
     }

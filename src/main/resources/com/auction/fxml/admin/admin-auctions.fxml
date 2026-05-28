@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="600.0" prefWidth="900.0"
+            styleClass="root"
+            stylesheets="@../../css/main.css"
+            xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.auction.client.controller.AdminController">
+
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Label text="⚙ Hệ thống Quản trị (Admin)" styleClass="navbar-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Duyệt Sản phẩm" styleClass="nav-btn" onAction="#goToManageItems"/>
+            <Button text="Quản lý Người dùng" styleClass="nav-btn" onAction="#goToManageUsers"/>
+            <Button text="Quản lý Phiên đấu giá" styleClass="nav-btn" disable="true"/>
+            <Button text="Hồ sơ cá nhân" styleClass="nav-btn" onAction="#goToProfile"/>
+            <Button text="Đăng xuất" styleClass="nav-btn-accent" onAction="#handleLogout"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="16">
+            <padding><Insets top="20" right="30" bottom="20" left="30"/></padding>
+
+            <Label text="Danh sách Phiên đấu giá (Chờ Bắt đầu)" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+
+            <TableView fx:id="auctionTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colAuctionId" text="Mã phiên" prefWidth="100"/>
+                    <TableColumn fx:id="colAuctionItem" text="Tên sản phẩm" prefWidth="250"/>
+                    <TableColumn fx:id="colAuctionPrice" text="Giá hiện tại" prefWidth="150"/>
+                    <TableColumn fx:id="colAuctionStatus" text="Trạng thái" prefWidth="120"/>
+                </columns>
+            </TableView>
+
+            <HBox spacing="12">
+                <Button text="Bắt đầu Phiên (Start)" styleClass="button-signin" onAction="#handleStartAuction"/>
+            </HBox>
+
+            <Label fx:id="auctionMessageLabel" text="" styleClass="label"/>
+        </VBox>
+    </center>
+</BorderPane>

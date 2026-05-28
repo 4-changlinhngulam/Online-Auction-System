@@ -10,6 +10,7 @@ public abstract class Item extends Entity {
     private String description;
     private double startingPrice;
     private String status; // PENDING, APPROVED, REJECTED, SOLD
+    private String ownerId;
 
     // Constructor dùng chung cho Factory
     public Item(String id, String name, double startingPrice) {
@@ -54,6 +55,14 @@ public abstract class Item extends Entity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 
     public abstract void printInfo();

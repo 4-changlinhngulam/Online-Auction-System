@@ -143,6 +143,9 @@ public class UserService {
             if (user == null) {
                 return Response.error("Không tìm thấy người dùng.");
             }
+            if ("ADMIN".equals(user.getRole())) {
+                return Response.error("Không thể khóa tài khoản Quản trị viên.");
+            }
 
             user.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);
             userDAO.update(user);

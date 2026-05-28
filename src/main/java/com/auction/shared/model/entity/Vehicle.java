@@ -1,4 +1,5 @@
 package com.auction.shared.model.entity;
+
 public class Vehicle extends Item {
     private long mileage;
 
@@ -13,6 +14,7 @@ public class Vehicle extends Item {
     public long getMileage() {
         return mileage;
     }
+
     public void setMileage(long mileage) {
         this.mileage = mileage;
     }

@@ -47,15 +47,26 @@ public class ItemService {
     public Response getAllItems() {
         try {
             List<Item> items = itemDAO.findAll();
-
-            if (items.isEmpty()) {
-                return new Response(true, "Hiện tại chưa có sản phẩm nào trong hệ thống.", null);
-            }
-            return new Response(true, "Lấy danh sách sản phẩm thành công.", items);
-
+            return new Response(true, "Lấy danh sách Item thành công.", items);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Lỗi khi lấy danh sách Item: " + e.getMessage(), e);
-            return Response.error("Lỗi máy chủ khi tải danh sách sản phẩm.");
+            LOGGER.log(Level.SEVERE, "Lỗi lấy danh sách Item: " + e.getMessage(), e);
+            return Response.error("Lỗi hệ thống khi tải danh sách Item.");
+        }
+    }
+
+    public Response getItemsByOwner(String ownerId) {
+        try {
+            List<Item> items = itemDAO.findAll();
+            List<Item> myItems = new java.util.ArrayList<>();
+            for (Item i : items) {
+                if (ownerId.equals(i.getOwnerId())) {
+                    myItems.add(i);
+                }
+            }
+            return new Response(true, "Lấy danh sách Item của tôi thành công.", myItems);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi lấy danh sách Item theo chủ: " + e.getMessage(), e);
+            return Response.error("Lỗi hệ thống khi tải danh sách Item.");
         }
     }
 

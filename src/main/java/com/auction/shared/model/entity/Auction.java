@@ -51,6 +51,7 @@ public class Auction extends Entity {
         if (this.status == AuctionStatus.OPEN) {
             this.status = AuctionStatus.RUNNING;
             this.startTime = LocalDateTime.now();
+            this.endTime = this.startTime.plusDays(3);
         }
     }
 

@@ -17,19 +17,20 @@ import java.util.logging.Logger;
  * Lớp chính chịu trách nhiệm khởi chạy Server. Lắng nghe kết nối và tạo ClientHandler cho mỗi client bằng Thread Pool.
  */
 public class AuctionServer {
+    private static final Logger LOGGER = Logger.getLogger(AuctionServer.class.getName());
     private static final int PORT = 9999;
     private static final int MAX_CLIENTS = 200;
     private static final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(MAX_CLIENTS);
 
     public static void main(String[] args) {
-        System.out.println("Server đang khởi động...");
+        LOGGER.info("Server đang khởi động...");
 
         // Nạp lại các phiên đấu giá đang mở từ Database để tiếp tục đếm giờ
         AuctionManager.getInstance().init();
 
         // Thêm Shutdown Hook để dọn dẹp Thread Pool khi tắt Server
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Đang tắt Server, dọn dẹp Thread Pool...");
+            LOGGER.info("Đang tắt Server, dọn dẹp Thread Pool...");
             THREAD_POOL.shutdown();
             try {
                 if (!THREAD_POOL.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -40,15 +41,15 @@ public class AuctionServer {
             }
         }));
 
-        System.out.println("Server đã sẵn sàng tại port " + PORT);
+        LOGGER.info("Server đã sẵn sàng tại port " + PORT);
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             while (true) {
                 Socket socket = serverSocket.accept();
-                System.out.println("Client mới kết nối: " + socket.getRemoteSocketAddress());
+                LOGGER.info("Client mới kết nối: " + socket.getRemoteSocketAddress());
                 THREAD_POOL.submit(new ClientHandler(socket));
             }
         } catch (IOException e) {
-            Logger.getLogger(AuctionServer.class.getName()).log(Level.SEVERE, "Lỗi khởi động server: " + e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, "Lỗi khởi động server: " + e.getMessage(), e);
         }
     }
 }

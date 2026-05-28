@@ -8,8 +8,10 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
+import java.util.logging.Logger;
 
 public class AuctionClientApp {
+    private static final Logger LOGGER = Logger.getLogger(AuctionClientApp.class.getName());
 
     public static void main(String[] args) {
         Application.launch(MainApp.class, args);
@@ -21,7 +23,7 @@ public class AuctionClientApp {
             // Bước 1: Kết nối tới Server
             try {
                 ServerConnection.getInstance().connect();
-                System.out.println("Đã kết nối tới Server thành công!");
+                LOGGER.info("Đã kết nối tới Server thành công!");
             } catch (Exception e) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Lỗi kết nối");

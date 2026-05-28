@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="600.0" prefWidth="900.0" 
+            styleClass="root" 
+            stylesheets="@../../css/main.css" 
+            xmlns="http://javafx.com/javafx/25" 
+            xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="com.auction.client.controller.ProfileController">
+
+    <!-- NAVBAR -->
+    <top>
+        <HBox styleClass="navbar" spacing="20" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="20" bottom="12" left="20"/></padding>
+            <Label text="👤 Hồ sơ cá nhân" styleClass="navbar-brand"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Quay lại" styleClass="nav-btn" onAction="#goBack"/>
+            <Button text="Đăng xuất" styleClass="nav-btn-accent" onAction="#handleLogout"/>
+        </HBox>
+    </top>
+
+    <!-- NỘI DUNG CHÍNH -->
+    <center>
+        <VBox alignment="CENTER" spacing="20">
+            <VBox styleClass="form-container" maxWidth="450" spacing="15">
+                <Label text="Cập nhật thông tin" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+                
+                <VBox spacing="5">
+                    <Label text="Tên đăng nhập" styleClass="label"/>
+                    <TextField fx:id="usernameField" promptText="Tên hiển thị" styleClass="input-field"/>
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Email" styleClass="label"/>
+                    <TextField fx:id="emailField" promptText="Địa chỉ email" styleClass="input-field"/>
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Mật khẩu mới (Để trống nếu không đổi)" styleClass="label"/>
+                    <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu mới" styleClass="input-field"/>
+                </VBox>
+
+                <Button text="Lưu thay đổi" maxWidth="Infinity" styleClass="button-signin" onAction="#handleUpdate"/>
+                
+                <Label fx:id="messageLabel" text="" styleClass="label" alignment="CENTER" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>

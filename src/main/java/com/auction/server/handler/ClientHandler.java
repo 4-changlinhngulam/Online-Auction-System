@@ -113,12 +113,14 @@ public class ClientHandler implements Runnable, BidObserver {
 
             case CREATE_ITEM -> processCreateItem(req);
             case GET_ALL_ITEMS -> itemService.getAllItems();
+            case GET_MY_ITEMS -> processGetMyItems(req);
             case GET_ITEM -> processGetItem(req);
             case UPDATE_ITEM -> processUpdateItem(req);
             case DELETE_ITEM -> processDeleteItem(req);
             case SEARCH_ITEM -> processSearchItem(req);
 
             case CREATE_AUCTION -> processCreateAuction(req);
+            case START_AUCTION -> processStartAuction(req);
             case GET_AUCTION -> processGetAuction(req);
             case GET_ALL_AUCTIONS -> auctionService.getAllAuctions();
             case CLOSE_AUCTION -> processCloseAuction(req);
@@ -175,9 +177,20 @@ public class ClientHandler implements Runnable, BidObserver {
             return Response.error("Vui lòng đăng nhập.");
         try {
             Item item = (Item) req.getPayload();
+            item.setOwnerId(currentUser.getId());
             return itemService.createItem(item);
         } catch (Exception e) {
             return Response.error("Dữ liệu sản phẩm không hợp lệ: " + e.getMessage());
+        }
+    }
+
+    private Response processGetMyItems(Request req) {
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
+        try {
+            return itemService.getItemsByOwner(currentUser.getId());
+        } catch (Exception e) {
+            return Response.error("Lỗi lấy danh sách sản phẩm: " + e.getMessage());
         }
     }
 
@@ -191,8 +204,19 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processUpdateItem(Request req) {
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             Item item = (Item) req.getPayload();
+            Response getRes = itemService.getItem(item.getId());
+            if (!getRes.isSuccess()) {
+                return Response.error("Không tìm thấy sản phẩm.");
+            }
+            Item existingItem = (Item) getRes.getData();
+            if (!currentUser.getRole().equals("ADMIN") && !currentUser.getId().equals(existingItem.getOwnerId())) {
+                return Response.error("Bạn không có quyền sửa sản phẩm này.");
+            }
+            item.setOwnerId(existingItem.getOwnerId()); // Giữ nguyên ownerId
             return itemService.updateItem(item);
         } catch (Exception e) {
             return Response.error("Dữ liệu cập nhật không hợp lệ: " + e.getMessage());
@@ -200,8 +224,18 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processDeleteItem(Request req) {
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
         try {
             String itemId = (String) req.getPayload();
+            Response getRes = itemService.getItem(itemId);
+            if (!getRes.isSuccess()) {
+                return Response.error("Không tìm thấy sản phẩm.");
+            }
+            Item existingItem = (Item) getRes.getData();
+            if (!currentUser.getRole().equals("ADMIN") && !currentUser.getId().equals(existingItem.getOwnerId())) {
+                return Response.error("Bạn không có quyền xóa sản phẩm này.");
+            }
             return itemService.deleteItem(itemId);
         } catch (Exception e) {
             return Response.error("ID sản phẩm xóa không hợp lệ: " + e.getMessage());
@@ -266,6 +300,19 @@ public class ClientHandler implements Runnable, BidObserver {
             return Response.error("Vui lòng đăng nhập.");
         try {
             Auction auction = (Auction) req.getPayload();
+            String itemId = auction.getItem().getId();
+            Response getRes = itemService.getItem(itemId);
+            if (!getRes.isSuccess()) {
+                return Response.error("Không tìm thấy sản phẩm.");
+            }
+            Item existingItem = (Item) getRes.getData();
+            if (!currentUser.getRole().equals("ADMIN") && !currentUser.getId().equals(existingItem.getOwnerId())) {
+                return Response.error("Bạn không có quyền tạo phiên đấu giá cho sản phẩm này.");
+            }
+            if (!"APPROVED".equals(existingItem.getStatus())) {
+                return Response.error("Sản phẩm chưa được kiểm duyệt. Vui lòng chờ Admin duyệt.");
+            }
+            auction.setItem(existingItem);
             return auctionService.createAuction(auction);
         } catch (Exception e) {
             return Response.error("Dữ liệu tạo phiên đấu giá không hợp lệ: " + e.getMessage());
@@ -276,6 +323,17 @@ public class ClientHandler implements Runnable, BidObserver {
         try {
             String auctionId = (String) req.getPayload();
             return auctionService.getAuction(auctionId);
+        } catch (Exception e) {
+            return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
+        }
+    }
+
+    private Response processStartAuction(Request req) {
+        if (currentUser == null || !"ADMIN".equals(currentUser.getRole()))
+            return Response.error("Chỉ Admin mới có quyền bắt đầu phiên đấu giá.");
+        try {
+            String auctionId = (String) req.getPayload();
+            return auctionService.startAuction(auctionId);
         } catch (Exception e) {
             return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
         }

@@ -64,7 +64,7 @@ public class LoginController {
                 // Chuyển màn hình tuỳ theo role
                 String role = loggedInUser.getRole();
                 if ("ADMIN".equals(role)) {
-                    SceneManager.switchTo("/com/auction/fxml/admin/admin.fxml");
+                    SceneManager.switchTo("/com/auction/fxml/admin/admin-auctions.fxml");
                 } else {
                     SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
                 }

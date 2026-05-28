@@ -82,12 +82,14 @@ public class AuctionManager {
     }
 
     public void init() {
-        System.out.println("Đang khôi phục các phiên đấu giá từ Database...");
+        LOGGER.info("Đang khôi phục các phiên đấu giá từ Database...");
         List<Auction> openAuctions = auctionDAO.getOpenAuctions();
         for (Auction auction : openAuctions) {
             addAuction(auction);
-            scheduleAuctionEnd(auction);
-            System.out.println("- Đã khôi phục và tiếp tục đếm giờ cho phiên: " + auction.getId());
+            if (auction.getStatus() == com.auction.shared.model.enums.AuctionStatus.RUNNING) {
+                scheduleAuctionEnd(auction);
+            }
+            LOGGER.info("- Đã khôi phục phiên: " + auction.getId() + " (Trạng thái: " + auction.getStatus() + ")");
         }
     }
 
@@ -98,7 +100,11 @@ public class AuctionManager {
             try {
                 auctionDAO.update(auction);
                 notifyObservers(auction);
-                System.out.println("Phiên đấu giá " + auctionId + " đã kết thúc!");
+                LOGGER.info("Phiên đấu giá " + auctionId + " đã kết thúc!");
+                activeAuctions.remove(auctionId);
+                autoBids.remove(auctionId);
+                auctionTimers.remove(auctionId);
+
             } catch (Exception e) {
                 LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi khi kết thúc phiên đấu giá: " + e.getMessage(), e);
             }
@@ -139,8 +145,7 @@ public class AuctionManager {
                         updatedAuction.getItem(),
                         updatedAuction.getCurrentPrice(),
                         winnerId,
-                        updatedAuction.getEndTime()
-                );
+                        updatedAuction.getEndTime());
             } catch (Exception e) {
                 LOGGER.log(java.util.logging.Level.SEVERE,
                         "Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage(), e);
@@ -172,7 +177,7 @@ public class AuctionManager {
             }
 
             java.util.concurrent.ScheduledFuture<?> newTimer = scheduler.schedule(() -> {
-                System.out.println("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
+                LOGGER.info("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
                 endAuction(auction.getId());
             }, delayInMillis, TimeUnit.MILLISECONDS);
 
@@ -220,14 +225,14 @@ public class AuctionManager {
                     if (remainingSeconds >= 0 && remainingSeconds <= 180) {
                         auction.setEndTime(auction.getEndTime().plusSeconds(180));
                         scheduleAuctionEnd(auction);
-                        System.out.println("Gia hạn phiên " + auctionId + " thêm 3 phút.");
+                        LOGGER.info("Gia hạn phiên " + auctionId + " thêm 3 phút.");
                     }
                 }
 
                 auctionDAO.update(auction);
                 notifyObservers(auction);
 
-                System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
+                LOGGER.info("User " + bidderId + " đặt giá thành công: $" + bidAmount);
 
                 triggerAutoBids(auctionId, bidAmount, bidderId);
 
@@ -282,7 +287,7 @@ public class AuctionManager {
         if (bestAutoBid != null) {
             final String bidderToAutoBid = bestAutoBid.getBidderId();
             final double nextBid = currentPrice + MIN_INCREMENT;
-            System.out.println("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
+            LOGGER.info("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
 
             // Chạy bất đồng bộ để tránh đệ quy và deadlock
             scheduler.execute(() -> processNewBid(auctionId, bidderToAutoBid, nextBid));

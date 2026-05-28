@@ -50,7 +50,9 @@ public class BidTransactionDAO {
      */
     public List<BidTransaction> getBidsByAuctionId(String auctionId) {
         List<BidTransaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM bid_history WHERE auction_id = ? ORDER BY timestamp ASC";
+        String sql = "SELECT b.*, u.username FROM bid_history b " +
+                     "JOIN users u ON b.bidder_id = u.id " +
+                     "WHERE b.auction_id = ? ORDER BY b.timestamp ASC";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -61,7 +63,7 @@ public class BidTransactionDAO {
                     BidTransaction tx = new BidTransaction();
                     tx.setId(rs.getString("id"));
                     tx.setAuctionId(rs.getString("auction_id"));
-                    tx.setBidderId(rs.getString("bidder_id"));
+                    tx.setBidderId(rs.getString("username")); // Đặt tạm username vào bidderId để Client hiển thị
                     tx.setAmount(rs.getDouble("amount"));
                     if (rs.getTimestamp("timestamp") != null) {
                         tx.setTimestamp(rs.getTimestamp("timestamp").toLocalDateTime());

@@ -23,21 +23,21 @@ import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.protocol.Response;
 
-// - Design Pattern: Singleton (Đảm bảo duy nhất 1 phiên bản quản lý đấu giá, tránh xung đột dữ liệu).
-// - Design Pattern: Observer (AuctionManager đóng vai trò Subject, quản lý danh sách ClientHandler là các Observer để push thông báo real-time).
+// - Design Pattern: Singleton
+// - Design Pattern: Observer
 public class AuctionManager {
+
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger
             .getLogger(AuctionManager.class.getName());
+    private static final double MIN_INCREMENT = 50000;
+
     private static volatile AuctionManager instance;
 
     private final Map<String, Auction> activeAuctions;
     private final Map<String, List<AutoBidConfig>> autoBids;
     private final Map<String, java.util.concurrent.ScheduledFuture<?>> auctionTimers;
-
     private final List<BidObserver> observers;
-
     private final AuctionDAO auctionDAO;
-
     private final ScheduledExecutorService scheduler;
 
     private AuctionManager() {
@@ -51,8 +51,6 @@ public class AuctionManager {
 
     public static AuctionManager getInstance() {
         AuctionManager auctionManager = instance;
-        // Double-checked locking giúp tăng hiệu năng (chỉ block luồng khi instance thực
-        // sự null).
         if (auctionManager == null) {
             synchronized (AuctionManager.class) {
                 auctionManager = instance;
@@ -76,10 +74,7 @@ public class AuctionManager {
         List<AutoBidConfig> configs = autoBids.computeIfAbsent(auctionId, k -> new ArrayList<>());
 
         synchronized (configs) {
-            // Loại bỏ cấu hình cũ của user này nếu có
             configs.removeIf(config -> config.getBidderId().equals(bidderId));
-
-            // Thêm cấu hình mới
             configs.add(new AutoBidConfig(bidderId, maxAmount));
         }
 
@@ -105,7 +100,7 @@ public class AuctionManager {
                 notifyObservers(auction);
                 System.out.println("Phiên đấu giá " + auctionId + " đã kết thúc!");
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi khi kết thúc phiên đấu giá: " + e.getMessage(), e);
             }
         }
     }
@@ -140,8 +135,12 @@ public class AuctionManager {
 
         for (BidObserver observer : copyList) {
             try {
-                observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId,
-                        updatedAuction.getEndTime());
+                observer.update(
+                        updatedAuction.getItem(),
+                        updatedAuction.getCurrentPrice(),
+                        winnerId,
+                        updatedAuction.getEndTime()
+                );
             } catch (Exception e) {
                 LOGGER.log(java.util.logging.Level.SEVERE,
                         "Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage(), e);
@@ -152,7 +151,6 @@ public class AuctionManager {
 
     public void scheduleAuctionEnd(Auction auction) {
         LocalDateTime endTime = auction.getEndTime();
-<<<<<<< HEAD
 
         // Nếu end_time bị null trong DB → kết thúc phiên ngay lập tức thay vì crash
         if (endTime == null) {
@@ -163,11 +161,6 @@ public class AuctionManager {
         }
 
         LocalDateTime now = LocalDateTime.now();
-=======
-        if (endTime == null) {
-            return;
-        }
->>>>>>> 6aa638ff572cf0079bbf9d2329e45bf90863bbdb
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {
@@ -193,10 +186,6 @@ public class AuctionManager {
             return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        // Bắt buộc dùng `synchronized (auction)` để ngăn chặn Race Condition khi 2
-        // client đặt giá cùng 1 mili-giây.
-        // Chỉ block phiên đấu giá hiện tại, không block toàn bộ AuctionManager -> Tối
-        // ưu hiệu suất.
         synchronized (auction) {
             Bidder bidder;
             try {
@@ -211,7 +200,6 @@ public class AuctionManager {
             }
 
             boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
-
             if (!isValidBid) {
                 return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
             }
@@ -225,10 +213,11 @@ public class AuctionManager {
                 BidTransactionDAO bidDao = new BidTransactionDAO();
                 bidDao.save(transaction);
 
-                // --- ANTI-SNIPING LOGIC ---
+                // Anti-sniping: gia hạn thêm 3 phút nếu bid trong 3 phút cuối
                 if (auction.getEndTime() != null) {
-                    long remainingSeconds = Duration.between(LocalDateTime.now(), auction.getEndTime()).getSeconds();
-                    if (remainingSeconds >= 0 && remainingSeconds <= 180) { // Nếu còn dưới 3 phút
+                    long remainingSeconds = Duration
+                            .between(LocalDateTime.now(), auction.getEndTime()).getSeconds();
+                    if (remainingSeconds >= 0 && remainingSeconds <= 180) {
                         auction.setEndTime(auction.getEndTime().plusSeconds(180));
                         scheduleAuctionEnd(auction);
                         System.out.println("Gia hạn phiên " + auctionId + " thêm 3 phút.");
@@ -236,18 +225,18 @@ public class AuctionManager {
                 }
 
                 auctionDAO.update(auction);
-
                 notifyObservers(auction);
 
                 System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
 
-                // Trigger Auto-bidding
                 triggerAutoBids(auctionId, bidAmount, bidderId);
 
                 return new Response(true, "Đặt giá thành công!", null);
 
             } catch (DataPersistenceException | EntityNotFoundException e) {
                 LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi Database khi lưu Bid: " + e.getMessage(), e);
+
+                // Rollback giá về trước khi bid thất bại
                 List<BidTransaction> history = auction.getBidHistory();
                 if (history != null && !history.isEmpty()) {
                     history.remove(history.size() - 1);
@@ -266,9 +255,6 @@ public class AuctionManager {
             }
         }
     }
-<<<<<<< HEAD
-}
-=======
 
     private void triggerAutoBids(String auctionId, double currentPrice, String lastBidderId) {
         List<AutoBidConfig> configs = autoBids.get(auctionId);
@@ -284,7 +270,7 @@ public class AuctionManager {
                     continue; // Không tự bid đè lên chính mình
                 }
 
-                double nextBid = currentPrice + 50000; // MIN_INCREMENT = 50000
+                double nextBid = currentPrice + MIN_INCREMENT;
                 if (nextBid <= config.getMaxAmount()) {
                     if (bestAutoBid == null || config.getMaxAmount() > bestAutoBid.getMaxAmount()) {
                         bestAutoBid = config;
@@ -295,14 +281,11 @@ public class AuctionManager {
 
         if (bestAutoBid != null) {
             final String bidderToAutoBid = bestAutoBid.getBidderId();
-            final double nextBid = currentPrice + 50000;
+            final double nextBid = currentPrice + MIN_INCREMENT;
             System.out.println("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
 
-            // Chạy bất đồng bộ để tránh đệ quy và tự chờ lock của chính mình
-            scheduler.execute(() -> {
-                processNewBid(auctionId, bidderToAutoBid, nextBid);
-            });
+            // Chạy bất đồng bộ để tránh đệ quy và deadlock
+            scheduler.execute(() -> processNewBid(auctionId, bidderToAutoBid, nextBid));
         }
     }
 }
->>>>>>> 6aa638ff572cf0079bbf9d2329e45bf90863bbdb

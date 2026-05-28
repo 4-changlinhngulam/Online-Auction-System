@@ -12,41 +12,45 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidTransactionDAO;
-import com.auction.shared.exception.AuctionClosedException;
-import com.auction.shared.exception.InvalidBidException;
+import com.auction.server.dao.UserDAO;
+import com.auction.shared.exception.DataPersistenceException;
+import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Auction;
 import com.auction.shared.model.entity.BidObserver;
 import com.auction.shared.model.entity.BidTransaction;
 import com.auction.shared.model.entity.Bidder;
+import com.auction.shared.model.entity.User;
 import com.auction.shared.model.enums.AuctionStatus;
 import com.auction.shared.protocol.Response;
 
-
-/** Singleton – Quản lý toàn bộ phiên đấu giá. Xử lý concurrency + Observer notify. */
+// - Design Pattern: Singleton
+// - Design Pattern: Observer
 public class AuctionManager {
-    // 1. Singleton: Đảm bảo chỉ có 1 Manager duy nhất trên toàn Server
-    private static AuctionManager instance;
 
-    // 2. Lưu trữ các phiên đấu giá đang chạy.
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger
+            .getLogger(AuctionManager.class.getName());
+    private static final double MIN_INCREMENT = 50000;
+
+    private static volatile AuctionManager instance;
+
     private final Map<String, Auction> activeAuctions;
-
-    // 3. Danh sách các Client đang theo dõi đấu giá (Dùng cho Observer Pattern)
+    private final Map<String, List<AutoBidConfig>> autoBids;
+    private final Map<String, java.util.concurrent.ScheduledFuture<?>> auctionTimers;
     private final List<BidObserver> observers;
-
-    // 4. Kết nối với Database
     private final AuctionDAO auctionDAO;
-
-    // Khởi tạo một bộ đếm giờ với luồng chạy ngầm (pool size = 5)
     private final ScheduledExecutorService scheduler;
+
     private AuctionManager() {
         this.activeAuctions = new ConcurrentHashMap<>();
+        this.autoBids = new ConcurrentHashMap<>();
+        this.auctionTimers = new ConcurrentHashMap<>();
         this.observers = new ArrayList<>();
         this.auctionDAO = new AuctionDAO();
         this.scheduler = Executors.newScheduledThreadPool(5);
     }
-    // Phương thức public static để lấy thể hiện duy nhất (Double-checked locking)
+
     public static AuctionManager getInstance() {
-        AuctionManager auctionManager = instance; // lấy dữ liệu instance vào biến cục bộ để tối ưu bộ nhớ
+        AuctionManager auctionManager = instance;
         if (auctionManager == null) {
             synchronized (AuctionManager.class) {
                 auctionManager = instance;
@@ -57,47 +61,34 @@ public class AuctionManager {
         }
         return auctionManager;
     }
+
     public void addAuction(Auction auction) {
         activeAuctions.put(auction.getId(), auction);
     }
 
-    /**
-     * Hàm xử lý ra giá. Từ khóa `synchronized` CỰC KỲ QUAN TRỌNG:
-     * Ngăn chặn việc 2 người bấm "Ra giá" cùng 1 phần nghìn giây gây lỗi giá.
-     */
-    public synchronized boolean placeBid(String auctionId, Bidder bidder, double bidAmount)
-            throws AuctionClosedException, InvalidBidException {
-
-        Auction auction = activeAuctions.get(auctionId);
-
-        if (auction == null) {
-            throw new IllegalArgumentException("Không tìm thấy phiên đấu giá này!");
+    public Response registerAutoBid(String auctionId, String bidderId, double maxAmount) {
+        if (!activeAuctions.containsKey(auctionId)) {
+            return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        if (auction.getStatus() != AuctionStatus.OPEN) {
-            throw new AuctionClosedException("Phiên đấu giá đã kết thúc. Bạn không thể ra giá nữa!");
+        List<AutoBidConfig> configs = autoBids.computeIfAbsent(auctionId, k -> new ArrayList<>());
+
+        synchronized (configs) {
+            configs.removeIf(config -> config.getBidderId().equals(bidderId));
+            configs.add(new AutoBidConfig(bidderId, maxAmount));
         }
 
-        if (bidAmount <= auction.getCurrentPrice()) {
-            throw new InvalidBidException("Mức giá phải cao hơn giá hiện tại (" + auction.getCurrentPrice() + ")");
+        return new Response(true, "Cài đặt Auto-bid thành công.", null);
+    }
+
+    public void init() {
+        System.out.println("Đang khôi phục các phiên đấu giá từ Database...");
+        List<Auction> openAuctions = auctionDAO.getOpenAuctions();
+        for (Auction auction : openAuctions) {
+            addAuction(auction);
+            scheduleAuctionEnd(auction);
+            System.out.println("- Đã khôi phục và tiếp tục đếm giờ cho phiên: " + auction.getId());
         }
-
-        auction.setCurrentPrice(bidAmount);
-        auction.setCurrentWinner(bidder);
-
-        // Lưu trạng thái mới xuống Database ngay lập tức
-        try {
-            auctionDAO.update(auction);
-            System.out.println("Người dùng " + bidder.getUsername() + " vừa ra giá " + bidAmount + " cho " + auction.getId());
-        } catch (Exception e) {
-            System.err.println("Lỗi khi lưu giá mới xuống DB!");
-            e.printStackTrace();
-            return false;
-        }
-
-        // Thông báo cho tất cả người dùng khác cập nhật màn hình
-        notifyObservers(auction);
-        return true;
     }
 
     public void endAuction(String auctionId) {
@@ -109,113 +100,192 @@ public class AuctionManager {
                 notifyObservers(auction);
                 System.out.println("Phiên đấu giá " + auctionId + " đã kết thúc!");
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi khi kết thúc phiên đấu giá: " + e.getMessage(), e);
             }
         }
     }
-    // OBSERVER PATTERN (CƠ CHẾ THÔNG BÁO PUSH)
 
     public void addObserver(BidObserver observer) {
-        if (!observers.contains(observer)) {
-            observers.add(observer);
+        if (observer != null) {
+            synchronized (observers) {
+                if (!observers.contains(observer)) {
+                    observers.add(observer);
+                }
+            }
         }
     }
 
     public void removeObserver(BidObserver observer) {
-        observers.remove(observer);
-    }
-
-    // Hàm này sẽ lặp qua tất cả các Client đang kết nối và báo cho họ biết có giá mới
-    private void notifyObservers(Auction updatedAuction) {
-        for (BidObserver observer : observers) {
-            String winnerId = "";
-            if (updatedAuction.getCurrentWinner() != null) {
-                winnerId = updatedAuction.getCurrentWinner().getId();
+        if (observer != null) {
+            synchronized (observers) {
+                observers.remove(observer);
             }
-
-            observer.update(updatedAuction.getItem(), updatedAuction.getCurrentPrice(), winnerId);
         }
     }
 
-    /**
-     * Lên lịch tự động kết thúc phiên đấu giá
-     */
+    private void notifyObservers(Auction updatedAuction) {
+        String winnerId = (updatedAuction.getCurrentWinner() != null)
+                ? updatedAuction.getCurrentWinner().getId()
+                : "";
+
+        List<BidObserver> copyList;
+        synchronized (observers) {
+            copyList = new ArrayList<>(observers);
+        }
+
+        for (BidObserver observer : copyList) {
+            try {
+                observer.update(
+                        updatedAuction.getItem(),
+                        updatedAuction.getCurrentPrice(),
+                        winnerId,
+                        updatedAuction.getEndTime()
+                );
+            } catch (Exception e) {
+                LOGGER.log(java.util.logging.Level.SEVERE,
+                        "Lỗi gửi thông báo cho 1 client, gỡ bỏ client: " + e.getMessage(), e);
+                removeObserver(observer);
+            }
+        }
+    }
+
     public void scheduleAuctionEnd(Auction auction) {
-        LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
 
-        // Tính khoảng thời gian từ bây giờ đến lúc kết thúc
+        // Nếu end_time bị null trong DB → kết thúc phiên ngay lập tức thay vì crash
+        if (endTime == null) {
+            LOGGER.warning("Phiên đấu giá " + auction.getId()
+                    + " không có end_time, tự động kết thúc ngay.");
+            endAuction(auction.getId());
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         long delayInMillis = Duration.between(now, endTime).toMillis();
 
         if (delayInMillis <= 0) {
-            // Nếu thời gian kết thúc ở trong quá khứ, đóng phiên ngay lập tức
             endAuction(auction.getId());
         } else {
-            // Đặt báo thức: Lệnh () -> endAuction(...) sẽ được chạy sau "delayInMillis"
-            scheduler.schedule(() -> {
+            java.util.concurrent.ScheduledFuture<?> existingTimer = auctionTimers.get(auction.getId());
+            if (existingTimer != null && !existingTimer.isDone()) {
+                existingTimer.cancel(false);
+            }
+
+            java.util.concurrent.ScheduledFuture<?> newTimer = scheduler.schedule(() -> {
                 System.out.println("Hệ thống tự động chốt phiên đấu giá: " + auction.getId());
                 endAuction(auction.getId());
             }, delayInMillis, TimeUnit.MILLISECONDS);
+
+            auctionTimers.put(auction.getId(), newTimer);
         }
     }
 
-    /**
-     * Xử lý một lượt đặt giá mới (Real-time).
-     * BẮT BUỘC dùng 'synchronized' để chặn nhiều người đặt giá cùng lúc.
-     */
-    public synchronized Response processNewBid(String auctionId, String bidderId, double bidAmount) {
-
-        // 1. Lấy thông tin phiên đấu giá từ RAM
+    public Response processNewBid(String auctionId, String bidderId, double bidAmount) {
         Auction auction = activeAuctions.get(auctionId);
-
-        // Kiểm tra phiên đấu giá có tồn tại trên RAM không
         if (auction == null) {
-            return new Response(false, "Phiên đấu giá không tồn tại hoặc đã kết thúc.", null);
+            return new Response(false, "Phiên đấu giá không tồn tại.", null);
         }
 
-        // Kiểm tra trạng thái phải là OPEN
-        if (auction.getStatus() != AuctionStatus.OPEN) {
-            return new Response(false, "Phiên đấu giá hiện không mở.", null);
-        }
-
-        // 2. Kiểm tra giá đặt: Phải cao hơn giá cao nhất hiện tại
-        if (bidAmount <= auction.getCurrentPrice()) {
-            return new Response(false, "Giá đặt phải lớn hơn giá hiện tại (" + auction.getCurrentPrice() + ").", null);
-        }
-
-        try {
-            // 3. Cập nhật thông tin TRÊN RAM ngay lập tức
-            auction.setCurrentPrice(bidAmount);
-
-            // Cập nhật người thắng tạm thời
-            Bidder tempWinner = new Bidder();
-            tempWinner.setId(bidderId);
-            auction.setCurrentWinner(tempWinner);
-
-            // 4. Ghi sổ TRONG DATABASE
-            BidTransaction transaction = new BidTransaction();
-            transaction.setAuctionId(auctionId);
-            transaction.setBidderId(bidderId);
-            transaction.setAmount(bidAmount);
-
-            BidTransactionDAO bidDao = new BidTransactionDAO();
-            boolean isSaved = bidDao.save(transaction);
-
-            if (!isSaved) {
-                return new Response(false, "Lỗi khi ghi nhận giao dịch vào cơ sở dữ liệu.", null);
+        synchronized (auction) {
+            Bidder bidder;
+            try {
+                UserDAO userDAO = new UserDAO();
+                User user = userDAO.findById(bidderId);
+                if (!(user instanceof Bidder)) {
+                    return new Response(false, "Tài khoản không có quyền đặt giá.", null);
+                }
+                bidder = (Bidder) user;
+            } catch (EntityNotFoundException | DataPersistenceException e) {
+                return new Response(false, "Lỗi xác thực người dùng: " + e.getMessage(), null);
             }
 
-            // 5. Cập nhật giá mới của phiên đấu giá vào bảng 'auctions'
-            auctionDAO.update(auction);
+            boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
+            if (!isValidBid) {
+                return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
+            }
 
-            notifyObservers(auction);
+            try {
+                BidTransaction transaction = new BidTransaction();
+                transaction.setAuctionId(auctionId);
+                transaction.setBidderId(bidderId);
+                transaction.setAmount(bidAmount);
 
-            return new Response(true, "Đặt giá thành công!", null);
+                BidTransactionDAO bidDao = new BidTransactionDAO();
+                bidDao.save(transaction);
 
-        } catch (Exception e) {
-            System.err.println("Lỗi Server khi xử lý Bid: " + e.getMessage());
-            return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
+                // Anti-sniping: gia hạn thêm 3 phút nếu bid trong 3 phút cuối
+                if (auction.getEndTime() != null) {
+                    long remainingSeconds = Duration
+                            .between(LocalDateTime.now(), auction.getEndTime()).getSeconds();
+                    if (remainingSeconds >= 0 && remainingSeconds <= 180) {
+                        auction.setEndTime(auction.getEndTime().plusSeconds(180));
+                        scheduleAuctionEnd(auction);
+                        System.out.println("Gia hạn phiên " + auctionId + " thêm 3 phút.");
+                    }
+                }
+
+                auctionDAO.update(auction);
+                notifyObservers(auction);
+
+                System.out.println("User " + bidderId + " đặt giá thành công: $" + bidAmount);
+
+                triggerAutoBids(auctionId, bidAmount, bidderId);
+
+                return new Response(true, "Đặt giá thành công!", null);
+
+            } catch (DataPersistenceException | EntityNotFoundException e) {
+                LOGGER.log(java.util.logging.Level.SEVERE, "Lỗi Database khi lưu Bid: " + e.getMessage(), e);
+
+                // Rollback giá về trước khi bid thất bại
+                List<BidTransaction> history = auction.getBidHistory();
+                if (history != null && !history.isEmpty()) {
+                    history.remove(history.size() - 1);
+                    if (!history.isEmpty()) {
+                        BidTransaction prev = history.get(history.size() - 1);
+                        auction.setCurrentPrice(prev.getAmount());
+                        Bidder prevWinner = new Bidder();
+                        prevWinner.setId(prev.getBidderId());
+                        auction.setCurrentWinner(prevWinner);
+                    } else {
+                        auction.setCurrentPrice(auction.getItem().getStartingPrice());
+                        auction.setCurrentWinner(null);
+                    }
+                }
+                return new Response(false, "Lỗi máy chủ khi xử lý đặt giá.", null);
+            }
+        }
+    }
+
+    private void triggerAutoBids(String auctionId, double currentPrice, String lastBidderId) {
+        List<AutoBidConfig> configs = autoBids.get(auctionId);
+        if (configs == null || configs.isEmpty()) {
+            return;
+        }
+
+        AutoBidConfig bestAutoBid = null;
+
+        synchronized (configs) {
+            for (AutoBidConfig config : configs) {
+                if (config.getBidderId().equals(lastBidderId)) {
+                    continue; // Không tự bid đè lên chính mình
+                }
+
+                double nextBid = currentPrice + MIN_INCREMENT;
+                if (nextBid <= config.getMaxAmount()) {
+                    if (bestAutoBid == null || config.getMaxAmount() > bestAutoBid.getMaxAmount()) {
+                        bestAutoBid = config;
+                    }
+                }
+            }
+        }
+
+        if (bestAutoBid != null) {
+            final String bidderToAutoBid = bestAutoBid.getBidderId();
+            final double nextBid = currentPrice + MIN_INCREMENT;
+            System.out.println("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
+
+            // Chạy bất đồng bộ để tránh đệ quy và deadlock
+            scheduler.execute(() -> processNewBid(auctionId, bidderToAutoBid, nextBid));
         }
     }
 }
-

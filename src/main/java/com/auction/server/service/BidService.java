@@ -4,10 +4,14 @@ import com.auction.server.dao.BidTransactionDAO;
 import com.auction.shared.model.entity.BidTransaction;
 import com.auction.shared.protocol.Response;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BidService {
+
+    private static final Logger LOGGER = Logger.getLogger(BidService.class.getName());
+
     private final BidTransactionDAO bidDAO;
-    // Inject AuctionManager
     private final AuctionManager auctionManager;
 
     public BidService(AuctionManager auctionManager) {
@@ -21,7 +25,6 @@ public class BidService {
     }
 
     public Response placeBid(String auctionId, String bidderId, double amount) {
-        // Validate dữ liệu sơ bộ
         if (amount <= 0) {
             return new Response(false, "Số tiền đặt giá phải lớn hơn 0.", null);
         }
@@ -29,7 +32,6 @@ public class BidService {
             return new Response(false, "Thông tin phiên đấu giá hoặc người dùng không hợp lệ.", null);
         }
 
-        // Bên trong hàm xử lý của AuctionManager, gọi bidDAO.save(...) để chốt giao dịch
         return auctionManager.processNewBid(auctionId, bidderId, amount);
     }
 
@@ -39,11 +41,10 @@ public class BidService {
         }
 
         try {
-            // Gọi DAO lấy dữ liệu
             List<BidTransaction> history = bidDAO.getBidsByAuctionId(auctionId);
             return new Response(true, "Lấy lịch sử thành công.", history);
         } catch (Exception e) {
-            System.err.println("Lỗi khi lấy lịch sử giá: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Lỗi khi lấy lịch sử giá: " + e.getMessage(), e);
             return new Response(false, "Lỗi máy chủ khi lấy lịch sử.", null);
         }
     }

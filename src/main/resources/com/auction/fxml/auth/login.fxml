@@ -44,7 +44,7 @@
                <Region prefHeight="8" />
 
                <!-- Button SIGN IN -->
-               <Button fx:id="signinButton" maxWidth="Infinity" onAction="#handleSignIn" styleClass="button-signin" text="SIGN IN" />
+               <Button fx:id="signinButton" defaultButton="true" maxWidth="Infinity" onAction="#handleSignIn" styleClass="button-signin" text="SIGN IN" />
 
                <!-- Button SIGN UP -->
                <Button fx:id="signupButton" maxWidth="Infinity" onAction="#handleRegisterLink" styleClass="button-outline" text="SIGN UP" />

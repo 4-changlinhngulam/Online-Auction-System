@@ -1,4 +1,5 @@
 package com.auction.client.controller;
+
 import com.auction.client.network.ServerConnection;
 import com.auction.client.util.SceneManager;
 import com.auction.client.util.SessionManager;
@@ -29,31 +30,55 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.io.ByteArrayInputStream;
+
 public class AuctionDetailController {
-    @FXML private ImageView itemImageView;
-    @FXML private Label imagePlaceholderLabel;
-    @FXML private Label itemNameLabel;
-    @FXML private Label itemCategoryLabel;
-    @FXML private Label itemDescLabel;
-    @FXML private Label startingPriceLabel;
-    @FXML private Label currentPriceLabel;
-    @FXML private Label leadingBidderLabel;
-    @FXML private Label timeRemainingLabel;
-    @FXML private Label statusLabel;
-    @FXML private LineChart<String, Number> bidPriceChart;
-    @FXML private CategoryAxis chartXAxis;
-    @FXML private NumberAxis chartYAxis;
-    @FXML private ListView<String> bidHistoryList;
+    @FXML
+    private ImageView itemImageView;
+    @FXML
+    private Label imagePlaceholderLabel;
+    @FXML
+    private Label itemNameLabel;
+    @FXML
+    private Label itemCategoryLabel;
+    @FXML
+    private Label itemDescLabel;
+    @FXML
+    private Label startingPriceLabel;
+    @FXML
+    private Label currentPriceLabel;
+    @FXML
+    private Label leadingBidderLabel;
+    @FXML
+    private Label timeRemainingLabel;
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private LineChart<String, Number> bidPriceChart;
+    @FXML
+    private CategoryAxis chartXAxis;
+    @FXML
+    private NumberAxis chartYAxis;
+    @FXML
+    private ListView<String> bidHistoryList;
     private XYChart.Series<String, Number> priceSeries;
-    @FXML private TextField bidAmountField;
-    @FXML private Button placeBidButton;
-    @FXML private Button autoBidButton;
-    @FXML private Label bidErrorLabel;
-    @FXML private VBox autoBidInfoPane;
-    @FXML private Label autoBidMaxLabel;
-    @FXML private Label autoBidIncrementLabel;
-    @FXML private Label sellerNameLabel;
-    @FXML private Label sellerRatingLabel;
+    @FXML
+    private TextField bidAmountField;
+    @FXML
+    private Button placeBidButton;
+    @FXML
+    private Button autoBidButton;
+    @FXML
+    private Label bidErrorLabel;
+    @FXML
+    private VBox autoBidInfoPane;
+    @FXML
+    private Label autoBidMaxLabel;
+    @FXML
+    private Label autoBidIncrementLabel;
+    @FXML
+    private Label sellerNameLabel;
+    @FXML
+    private Label sellerRatingLabel;
     private Auction currentAuction;
     private Timeline countdownTimeline;
 
@@ -65,6 +90,7 @@ public class AuctionDetailController {
     }
 
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
     @FXML
     public void initialize() {
         instance = this; // Ghi nhận phiên bản đang active
@@ -84,7 +110,8 @@ public class AuctionDetailController {
 
             // ================= THÊM MỚI TỪ ĐÂY =================
 
-            // 1. Gửi request báo cho Server biết: "Client này đang xem phiên đấu giá, hãy gửi thông báo cho tôi"
+            // 1. Gửi request báo cho Server biết: "Client này đang xem phiên đấu giá, hãy
+            // gửi thông báo cho tôi"
             Request subscribeReq = new Request(RequestType.SUBSCRIBE_AUCTION, currentAuction.getId());
             ServerConnection.getInstance().sendRequestAsync(subscribeReq, null);
 
@@ -108,6 +135,7 @@ public class AuctionDetailController {
             // ====================================================
         }
     }
+
     private void displayAuction(Auction auction) {
         Item item = auction.getItem();
         // Thông tin cơ bản
@@ -137,8 +165,24 @@ public class AuctionDetailController {
             statusLabel.setStyle("-fx-text-fill: #00ff00; -fx-font-weight: bold;");
         }
         // Điểm giá khởi tạo sẽ được nạp trong loadBidHistory() thay vì gán cứng
+        if (auction.getCurrentWinner() != null && auction.getCurrentWinner().getName() != null) {
+            updateLeadingBidderDisplay(auction.getCurrentWinner().getName());
+        }
         startCountdown(auction);
     }
+
+    private void updateLeadingBidderDisplay(String name) {
+        if (name == null || name.trim().isEmpty() || "--".equals(name)) {
+            leadingBidderLabel.setText("--");
+            return;
+        }
+        if (currentAuction != null && "FINISHED".equals(currentAuction.getStatus().toString())) {
+            leadingBidderLabel.setText("Người thắng: " + name);
+        } else {
+            leadingBidderLabel.setText("Người dẫn đầu: " + name);
+        }
+    }
+
     private void startCountdown(Auction auction) {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
@@ -164,11 +208,18 @@ public class AuctionDetailController {
                 placeBidButton.setDisable(true);
                 autoBidButton.setDisable(true);
                 countdownTimeline.stop();
+
+                // Cập nhật lại nhãn người dẫn đầu thành người thắng cuộc
+                String currentText = leadingBidderLabel.getText();
+                if (currentText.startsWith("Người dẫn đầu: ")) {
+                    leadingBidderLabel.setText(currentText.replace("Người dẫn đầu: ", "Người thắng: "));
+                }
             }
         }));
         countdownTimeline.setCycleCount(Timeline.INDEFINITE);
         countdownTimeline.play();
     }
+
     private void loadBidHistory() {
         try {
             Request req = new Request(RequestType.GET_BID_HISTORY, currentAuction.getId());
@@ -178,23 +229,24 @@ public class AuctionDetailController {
                     Platform.runLater(() -> {
                         bidHistoryList.getItems().clear();
                         priceSeries.getData().clear();
-                        
+
                         // Thêm điểm bắt đầu phiên đấu giá vào biểu đồ
                         if (currentAuction.getStartTime() != null) {
-                            updateChartData(currentAuction.getStartTime().format(timeFormatter), currentAuction.getItem().getStartingPrice());
+                            updateChartData(currentAuction.getStartTime().format(timeFormatter),
+                                    currentAuction.getItem().getStartingPrice());
                         }
                         for (BidTransaction bid : history) {
                             // Cập nhật danh sách (hiển thị giao dịch mới nhất ở trên cùng)
                             bidHistoryList.getItems().add(0,
-                                    String.format("%s đặt: %,.0f VND", bid.getBidderId(), bid.getAmount())
-                            );
-                            
+                                    String.format("%s đặt: %,.0f VND", bid.getBidderId(), bid.getAmount()));
+
                             // Thêm điểm vào biểu đồ (thêm tuần tự theo thời gian)
                             updateChartData(bid.getTimestamp().format(timeFormatter), bid.getAmount());
                         }
-                        // Cập nhật người dẫn đầu dựa trên lịch sử (lịch sử DB trả về ASC, phần tử cuối cùng là mới nhất)
+                        // Cập nhật người dẫn đầu dựa trên lịch sử (lịch sử DB trả về ASC, phần tử cuối
+                        // cùng là mới nhất)
                         if (!history.isEmpty()) {
-                            leadingBidderLabel.setText(history.get(history.size() - 1).getBidderId());
+                            updateLeadingBidderDisplay(history.get(history.size() - 1).getBidderId());
                         }
                     });
                 }
@@ -203,6 +255,7 @@ public class AuctionDetailController {
             e.printStackTrace();
         }
     }
+
     @FXML
     private void handlePlaceBid() {
         String amountStr = bidAmountField.getText().trim();
@@ -213,13 +266,14 @@ public class AuctionDetailController {
         try {
             double amount = Double.parseDouble(amountStr);
             if (amount <= currentAuction.getCurrentPrice()) {
-                bidErrorLabel.setText("Giá phải cao hơn " + String.format("%,.0f VND", currentAuction.getCurrentPrice()));
+                bidErrorLabel
+                        .setText("Giá phải cao hơn " + String.format("%,.0f VND", currentAuction.getCurrentPrice()));
                 return;
             }
             bidAmountField.clear();
             placeBidButton.setDisable(true); // Khóa nút
             bidErrorLabel.setText("Đang đặt giá...");
-            
+
             Request req = new Request(RequestType.PLACE_BID,
                     new Object[] {
                             currentAuction.getId(),
@@ -239,7 +293,7 @@ public class AuctionDetailController {
                         currentPriceLabel.setText(String.format("%,.0f VND", amount));
 
                         // 3. Cập nhật người dẫn đầu là chính bạn (người dùng hiện tại)
-                        leadingBidderLabel.setText(SessionManager.getInstance().getCurrentUser().getUsername());
+                        updateLeadingBidderDisplay(SessionManager.getInstance().getCurrentUser().getUsername());
 
                         // 4. Thêm điểm giá mới vào biểu đồ LineChart
                         String currentTime = LocalDateTime.now().format(timeFormatter);
@@ -261,7 +315,9 @@ public class AuctionDetailController {
             bidErrorLabel.setText("Đã có lỗi xảy ra!");
         }
     }
-    /** * Observer — được gọi khi Server push cập nhật realtime cho TẤT CẢ client
+
+    /**
+     * * Observer — được gọi khi Server push cập nhật realtime cho TẤT CẢ client
      */
     public void onBidUpdate(Item item, double newPrice, String lastBidderId, LocalDateTime newEndTime) {
         Platform.runLater(() -> {
@@ -270,12 +326,15 @@ public class AuctionDetailController {
                 // Anti-sniping: Gia hạn thời gian
                 if (newEndTime != null && !newEndTime.equals(currentAuction.getEndTime())) {
                     currentAuction.setEndTime(newEndTime);
-                    bidErrorLabel.setStyle("-fx-text-fill: #ff9900;");
-                    bidErrorLabel.setText("Phút chót! Thời gian đã được gia hạn.");
+                    long remainingSeconds = java.time.Duration.between(LocalDateTime.now(), newEndTime).getSeconds();
+                    if (remainingSeconds < 300) {
+                        bidErrorLabel.setStyle("-fx-text-fill: #ff9900;");
+                        bidErrorLabel.setText("Thời gian đã được gia hạn thêm 5 phút.");
+                    }
                 }
                 // Cập nhật nhãn giá và người dẫn đầu
                 currentPriceLabel.setText(String.format("%,.0f VND", newPrice));
-                leadingBidderLabel.setText(lastBidderId != null ? lastBidderId : "--");
+                updateLeadingBidderDisplay(lastBidderId);
                 // Cập nhật biểu đồ
                 updateChartData(LocalDateTime.now().format(timeFormatter), newPrice);
                 // Tải lại lịch sử
@@ -283,6 +342,7 @@ public class AuctionDetailController {
             }
         });
     }
+
     @FXML
     private void handleAutoBidSetup() {
         TextInputDialog dialog = new TextInputDialog();
@@ -306,7 +366,9 @@ public class AuctionDetailController {
                 ServerConnection.getInstance().sendRequestAsync(req, res -> {
                     Platform.runLater(() -> {
                         if (res != null && res.isSuccess()) {
-                            enableAutoBidUI(maxAmount, 50000); // Mặc định bước giá 50k
+                            double startingPrice = currentAuction.getItem().getStartingPrice();
+                            double minStep = startingPrice == 0 ? 0 : Math.max(1.0, startingPrice * 0.01);
+                            enableAutoBidUI(maxAmount, minStep);
                             showAlert(Alert.AlertType.INFORMATION, "Thành công", res.getMessage());
                         } else {
                             showAlert(Alert.AlertType.ERROR, "Lỗi", res != null ? res.getMessage() : "Mất kết nối");
@@ -320,10 +382,12 @@ public class AuctionDetailController {
             }
         });
     }
+
     @FXML
     private void handleCancelAutoBid(ActionEvent event) {
-        if (currentAuction == null) return;
-        
+        if (currentAuction == null)
+            return;
+
         Request req = new Request(RequestType.CANCEL_AUTO_BID, currentAuction.getId());
         ServerConnection.getInstance().sendRequestAsync(req, res -> {
             Platform.runLater(() -> {
@@ -331,11 +395,13 @@ public class AuctionDetailController {
                     showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã hủy Auto-bid!");
                     disableAutoBidUI();
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể hủy Auto-bid: " + (res != null ? res.getMessage() : ""));
+                    showAlert(Alert.AlertType.ERROR, "Lỗi",
+                            "Không thể hủy Auto-bid: " + (res != null ? res.getMessage() : ""));
                 }
             });
         });
     }
+
     @FXML
     private void handleBack() {
         if (countdownTimeline != null) {
@@ -348,15 +414,18 @@ public class AuctionDetailController {
 
         SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
     }
+
     private void updateChartData(String time, double price) {
         Platform.runLater(() -> {
             priceSeries.getData().add(new XYChart.Data<>(time, price));
-            // Giới hạn số lượng điểm trên biểu đồ để tránh tràn bộ nhớ/UI lag (ví dụ: giữ 20 điểm mới nhất)
+            // Giới hạn số lượng điểm trên biểu đồ để tránh tràn bộ nhớ/UI lag (ví dụ: giữ
+            // 20 điểm mới nhất)
             if (priceSeries.getData().size() > 20) {
                 priceSeries.getData().remove(0);
             }
         });
     }
+
     private void enableAutoBidUI(double maxPrice, double increment) {
         autoBidMaxLabel.setText(String.format("%,.0f VND", maxPrice));
         autoBidIncrementLabel.setText(String.format("%,.0f VND", increment));
@@ -364,11 +433,13 @@ public class AuctionDetailController {
         autoBidInfoPane.setManaged(true);
         autoBidButton.setDisable(true);
     }
+
     private void disableAutoBidUI() {
         autoBidInfoPane.setVisible(false);
         autoBidInfoPane.setManaged(false);
         autoBidButton.setDisable(false);
     }
+
     private void setupNumericValidation() {
         bidAmountField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*")) {
@@ -376,6 +447,7 @@ public class AuctionDetailController {
             }
         });
     }
+
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
         alert.setTitle(title);

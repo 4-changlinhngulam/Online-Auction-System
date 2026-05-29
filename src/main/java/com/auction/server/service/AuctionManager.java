@@ -29,7 +29,10 @@ public class AuctionManager {
 
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger
             .getLogger(AuctionManager.class.getName());
-    private static final double MIN_INCREMENT = 50000;
+
+    private double calculateMinStep(double startingPrice) {
+        return startingPrice == 0 ? 0 : Math.max(1.0, startingPrice * 0.01);
+    }
 
     private static volatile AuctionManager instance;
 
@@ -145,8 +148,8 @@ public class AuctionManager {
     }
 
     private void notifyObservers(Auction updatedAuction) {
-        String winnerId = (updatedAuction.getCurrentWinner() != null)
-                ? updatedAuction.getCurrentWinner().getId()
+        String winnerName = (updatedAuction.getCurrentWinner() != null)
+                ? updatedAuction.getCurrentWinner().getUsername()
                 : "";
 
         List<BidObserver> copyList;
@@ -159,7 +162,7 @@ public class AuctionManager {
                 observer.update(
                         updatedAuction.getItem(),
                         updatedAuction.getCurrentPrice(),
-                        winnerId,
+                        winnerName,
                         updatedAuction.getEndTime());
             } catch (Exception e) {
                 LOGGER.log(java.util.logging.Level.SEVERE,
@@ -219,6 +222,37 @@ public class AuctionManager {
                 return new Response(false, "Lỗi xác thực người dùng: " + e.getMessage(), null);
             }
 
+            if (auction.getItem() != null && bidderId.equals(auction.getItem().getOwnerId())) {
+                return new Response(false, "Chủ sản phẩm không được tự đặt giá.", null);
+            }
+
+            if (auction.getCurrentWinner() != null && bidderId.equals(auction.getCurrentWinner().getId())) {
+                return new Response(false, "Bạn đang là người trả giá cao nhất, không thể tự đặt thêm giá.", null);
+            }
+
+            // Nếu người dùng đã cài Auto-bid, không cho phép đặt giá thủ công cao hơn giá tối đa đã cài
+            List<AutoBidConfig> configs = autoBids.get(auctionId);
+            if (configs != null) {
+                synchronized (configs) {
+                    for (AutoBidConfig config : configs) {
+                        if (config.getBidderId().equals(bidderId)) {
+                            if (bidAmount > config.getMaxAmount()) {
+                                String errorMsg = "Bạn đã cài Auto-bid với giá tối đa " 
+                                    + String.format("%,.0f VND", config.getMaxAmount()) 
+                                    + ". Không thể đặt giá thủ công cao hơn mức này!";
+                                return new Response(false, errorMsg, null);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            double minStep = calculateMinStep(auction.getItem().getStartingPrice());
+            if (bidAmount < auction.getCurrentPrice() + minStep) {
+                return new Response(false, String.format("Mức giá phải cao hơn giá hiện tại ít nhất là: $%.2f", minStep), null);
+            }
+
             boolean isValidBid = auction.handleNewBid(bidder, bidAmount);
             if (!isValidBid) {
                 return new Response(false, "Mức giá không hợp lệ hoặc phiên đã kết thúc.", null);
@@ -233,14 +267,14 @@ public class AuctionManager {
                 BidTransactionDAO bidDao = new BidTransactionDAO();
                 bidDao.save(transaction);
 
-                // Anti-sniping: gia hạn thêm 3 phút nếu bid trong 3 phút cuối
+                // Anti-sniping: gia hạn thêm 5 phút nếu bid trong 5 phút cuối
                 if (auction.getEndTime() != null) {
                     long remainingSeconds = Duration
                             .between(LocalDateTime.now(), auction.getEndTime()).getSeconds();
-                    if (remainingSeconds >= 0 && remainingSeconds <= 180) {
-                        auction.setEndTime(auction.getEndTime().plusSeconds(180));
+                    if (remainingSeconds >= 0 && remainingSeconds < 300) {
+                        auction.setEndTime(auction.getEndTime().plusSeconds(300));
                         scheduleAuctionEnd(auction);
-                        LOGGER.info("Gia hạn phiên " + auctionId + " thêm 3 phút.");
+                        LOGGER.info("Gia hạn phiên " + auctionId + " thêm 5 phút.");
                     }
                 }
 
@@ -249,7 +283,7 @@ public class AuctionManager {
 
                 LOGGER.info("User " + bidderId + " đặt giá thành công: $" + bidAmount);
 
-                triggerAutoBids(auctionId, bidAmount, bidderId);
+                triggerAutoBids(auctionId, bidAmount, bidderId, auction.getItem().getStartingPrice());
 
                 return new Response(true, "Đặt giá thành công!", null);
 
@@ -276,7 +310,7 @@ public class AuctionManager {
         }
     }
 
-    private void triggerAutoBids(String auctionId, double currentPrice, String lastBidderId) {
+    private void triggerAutoBids(String auctionId, double currentPrice, String lastBidderId, double startingPrice) {
         List<AutoBidConfig> configs = autoBids.get(auctionId);
         if (configs == null || configs.isEmpty()) {
             return;
@@ -290,7 +324,7 @@ public class AuctionManager {
                     continue; // Không tự bid đè lên chính mình
                 }
 
-                double nextBid = currentPrice + MIN_INCREMENT;
+                double nextBid = currentPrice + calculateMinStep(startingPrice);
                 if (nextBid <= config.getMaxAmount()) {
                     if (bestAutoBid == null || config.getMaxAmount() > bestAutoBid.getMaxAmount()) {
                         bestAutoBid = config;
@@ -301,7 +335,7 @@ public class AuctionManager {
 
         if (bestAutoBid != null) {
             final String bidderToAutoBid = bestAutoBid.getBidderId();
-            final double nextBid = currentPrice + MIN_INCREMENT;
+            final double nextBid = currentPrice + calculateMinStep(startingPrice);
             LOGGER.info("Hệ thống Auto-bid cho " + bidderToAutoBid + " -> " + nextBid);
 
             // Chạy bất đồng bộ để tránh đệ quy và deadlock

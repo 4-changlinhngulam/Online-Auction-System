@@ -260,13 +260,13 @@ class AuctionManagerTest {
         for (int i = 0; i < 20; i++) {
             Thread.sleep(50);
             Auction updated = auctionDAO.findById("AUC_AM_AUTO_01");
-            if (updated.getCurrentPrice() == 650000.0 && "USER_AM_AUTO_01".equals(updated.getCurrentWinner().getId())) {
+            if (updated.getCurrentPrice() == 605000.0 && "USER_AM_AUTO_01".equals(updated.getCurrentWinner().getId())) {
                 autoBidExecuted = true;
                 break;
             }
         }
 
-        assertTrue(autoBidExecuted, "Auto-bid phải tự động được kích hoạt và nâng giá lên 650,000 VND");
+        assertTrue(autoBidExecuted, "Auto-bid phải tự động được kích hoạt và nâng giá lên 605,000 VND");
     }
 
     @Test
@@ -299,8 +299,8 @@ class AuctionManagerTest {
 
         auctionManager.addAuction(auction);
 
-        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 620000 (nhỏ hơn mức giá tiếp theo là 650000)
-        auctionManager.registerAutoBid("AUC_AM_AUTO_02", "USER_AM_AUTO_03", 620000.0);
+        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 602000 (nhỏ hơn mức giá tiếp theo là 605000)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_02", "USER_AM_AUTO_03", 602000.0);
 
         // 4. Bidder B đặt giá thủ công 600000
         Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_02", "USER_AM_AUTO_04", 600000.0);
@@ -333,13 +333,13 @@ class AuctionManagerTest {
         Electronics item = new Electronics();
         item.setId("ITEM_AM_AUTO_03");
         item.setName("Console");
-        item.setStartingPrice(500000.0);
+        item.setStartingPrice(5000000.0);
         itemDAO.save(item);
 
         Auction auction = new Auction();
         auction.setId("AUC_AM_AUTO_03");
         auction.setItem(item);
-        auction.setCurrentPrice(500000.0);
+        auction.setCurrentPrice(5000000.0);
         auction.setStatus(AuctionStatus.RUNNING);
         auction.setStartTime(LocalDateTime.now());
         auction.setEndTime(LocalDateTime.now().plusDays(1));
@@ -347,25 +347,25 @@ class AuctionManagerTest {
 
         auctionManager.addAuction(auction);
 
-        // 3. Đăng ký Auto-bid cho Bidder A (max 800k) và Bidder B (max 900k)
-        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_05", 800000.0);
-        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_06", 900000.0);
+        // 3. Đăng ký Auto-bid cho Bidder A (max 5,550,000) và Bidder B (max 5,600,000)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_05", 5550000.0);
+        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_06", 5600000.0);
 
         // 4. Bidder C đặt giá thủ công 550000 để kích hoạt ping-pong
-        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_03", "USER_AM_AUTO_07", 550000.0);
+        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_03", "USER_AM_AUTO_07", 5500000.0);
         assertTrue(bidResponse.isSuccess());
 
         // 5. Chờ chuỗi ping-pong tự nâng giá hoàn thành
         boolean pingPongDone = false;
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < 100; i++) { // Increase wait iterations because smaller step means more bids
             Thread.sleep(100);
             Auction updated = auctionDAO.findById("AUC_AM_AUTO_03");
-            if (updated.getCurrentPrice() == 800000.0 && "USER_AM_AUTO_06".equals(updated.getCurrentWinner().getId())) {
+            if (updated.getCurrentPrice() == 5550000.0 && "USER_AM_AUTO_06".equals(updated.getCurrentWinner().getId())) {
                 pingPongDone = true;
                 break;
             }
         }
 
-        assertTrue(pingPongDone, "Chuỗi ping-pong Auto-bid phải dừng ở 800,000 VND và người thắng là Bidder B");
+        assertTrue(pingPongDone, "Chuỗi ping-pong Auto-bid phải dừng ở 5,550,000 VND và người thắng là Bidder B");
     }
 }

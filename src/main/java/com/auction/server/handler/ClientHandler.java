@@ -173,6 +173,9 @@ public class ClientHandler implements Runnable, BidObserver {
     private Response processCreateItem(Request req) {
         if (currentUser == null)
             return Response.error("Vui lòng đăng nhập.");
+        if ("BIDDER".equalsIgnoreCase(currentUser.getRole())) {
+            return Response.error("Tài khoản BIDDER không có quyền tạo sản phẩm.");
+        }
         try {
             Item item = (Item) req.getPayload();
             item.setOwnerId(currentUser.getId());
@@ -204,6 +207,9 @@ public class ClientHandler implements Runnable, BidObserver {
     private Response processUpdateItem(Request req) {
         if (currentUser == null)
             return Response.error("Vui lòng đăng nhập.");
+        if ("BIDDER".equalsIgnoreCase(currentUser.getRole())) {
+            return Response.error("Tài khoản BIDDER không có quyền sửa sản phẩm.");
+        }
         try {
             Item item = (Item) req.getPayload();
             Response getRes = itemService.getItem(item.getId());
@@ -224,6 +230,9 @@ public class ClientHandler implements Runnable, BidObserver {
     private Response processDeleteItem(Request req) {
         if (currentUser == null)
             return Response.error("Vui lòng đăng nhập.");
+        if ("BIDDER".equalsIgnoreCase(currentUser.getRole())) {
+            return Response.error("Tài khoản BIDDER không có quyền xóa sản phẩm.");
+        }
         try {
             String itemId = (String) req.getPayload();
             Response getRes = itemService.getItem(itemId);
@@ -294,6 +303,9 @@ public class ClientHandler implements Runnable, BidObserver {
     private Response processCreateAuction(Request req) {
         if (currentUser == null)
             return Response.error("Vui lòng đăng nhập.");
+        if ("BIDDER".equalsIgnoreCase(currentUser.getRole())) {
+            return Response.error("Tài khoản BIDDER không có quyền tạo phiên đấu giá.");
+        }
         try {
             Auction auction = (Auction) req.getPayload();
             String itemId = auction.getItem().getId();
@@ -385,6 +397,11 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processSetupAutoBid(Request req) {
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
+        if (!"BIDDER".equalsIgnoreCase(currentUser.getRole())) {
+            return Response.error("Chỉ BIDDER mới có quyền cài đặt Auto-bid.");
+        }
         try {
             Object[] data = (Object[]) req.getPayload();
             String auctionId = (String) data[0];

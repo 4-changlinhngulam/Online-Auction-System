@@ -33,7 +33,8 @@
                 <columns>
                     <TableColumn fx:id="colUsername" text="Tên đăng nhập" prefWidth="200"/>
                     <TableColumn fx:id="colEmail" text="Email" prefWidth="250"/>
-                    <TableColumn fx:id="colRole" text="Vai trò" prefWidth="150"/>
+                    <TableColumn fx:id="colRole" text="Vai trò" prefWidth="100"/>
+                    <TableColumn fx:id="colUserStatus" text="Trạng thái" prefWidth="100"/>
                 </columns>
             </TableView>
 

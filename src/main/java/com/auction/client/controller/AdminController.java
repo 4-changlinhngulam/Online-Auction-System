@@ -41,6 +41,8 @@ public class AdminController {
     @FXML
     private TableColumn<User, String> colRole;
     @FXML
+    private TableColumn<User, String> colUserStatus;
+    @FXML
     private Label userMessageLabel;
 
     @FXML
@@ -78,6 +80,9 @@ public class AdminController {
             colUsername.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
             colEmail.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getEmail()));
             colRole.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole()));
+            colUserStatus.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getStatus() != null ? data.getValue().getStatus().name() : "UNKNOWN"
+            ));
             loadUsersData();
         }
         

@@ -61,10 +61,13 @@ public class LoginController {
                 errorLabel.setStyle("-fx-text-fill: #00ff00;");
                 errorLabel.setText("Đăng nhập thành công!");
 
+                // Đăng ký nhận notification
+                ServerConnection.getInstance().sendRequestAsync(new Request(RequestType.SUBSCRIBE_AUCTION, null), subRes -> {});
+
                 // Chuyển màn hình tuỳ theo role
                 String role = loggedInUser.getRole();
                 if ("ADMIN".equals(role)) {
-                    SceneManager.switchTo("/com/auction/fxml/admin/admin.fxml");
+                    SceneManager.switchTo("/com/auction/fxml/admin/admin-auctions.fxml");
                 } else {
                     SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
                 }

@@ -50,7 +50,16 @@ public class Auction extends Entity {
     public void startAuction() {
         if (this.status == AuctionStatus.OPEN) {
             this.status = AuctionStatus.RUNNING;
-            this.startTime = LocalDateTime.now();
+            
+            // Nếu thời gian bắt đầu dự kiến đã qua, cập nhật thành thời điểm hiện tại
+            if (this.startTime == null || this.startTime.isBefore(LocalDateTime.now())) {
+                this.startTime = LocalDateTime.now();
+            }
+            
+            // Giữ nguyên endTime. Nếu endTime chưa có hoặc bị trôi qua, gán mặc định
+            if (this.endTime == null || this.endTime.isBefore(this.startTime)) {
+                this.endTime = this.startTime.plusDays(3);
+            }
         }
     }
 

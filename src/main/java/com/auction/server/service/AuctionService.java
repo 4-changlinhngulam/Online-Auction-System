@@ -24,11 +24,35 @@ public class AuctionService {
         try {
             auctionDAO.save(auction);
             AuctionManager.getInstance().addAuction(auction);
-            AuctionManager.getInstance().scheduleAuctionEnd(auction);
-            return new Response(true, "Tạo phiên đấu giá thành công.", auction);
+            return new Response(true, "Tạo phiên đấu giá thành công (Đang chờ duyệt).", auction);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Lỗi tạo phiên đấu giá: " + e.getMessage(), e);
             return Response.error("Lỗi máy chủ khi tạo phiên đấu giá: " + e.getMessage());
+        }
+    }
+
+    public Response startAuction(String auctionId) {
+        if (auctionId == null || auctionId.trim().isEmpty()) {
+            return Response.error("ID phiên đấu giá không hợp lệ.");
+        }
+        try {
+            Auction auction = auctionDAO.findById(auctionId);
+            if (auction == null) {
+                return Response.error("Không tìm thấy phiên đấu giá.");
+            }
+            if (auction.getStatus() != com.auction.shared.model.enums.AuctionStatus.OPEN) {
+                return Response.error("Chỉ có thể bắt đầu phiên đang ở trạng thái OPEN.");
+            }
+            
+            auction.startAuction();
+            auctionDAO.update(auction);
+            AuctionManager.getInstance().addAuction(auction); // Cập nhật lại vào cache
+            AuctionManager.getInstance().scheduleAuctionEnd(auction);
+            
+            return new Response(true, "Đã bắt đầu phiên đấu giá thành công.", auction);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi bắt đầu phiên đấu giá: " + e.getMessage(), e);
+            return Response.error("Lỗi máy chủ khi bắt đầu phiên đấu giá: " + e.getMessage());
         }
     }
 
@@ -65,6 +89,28 @@ public class AuctionService {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Lỗi đóng phiên đấu giá: " + e.getMessage(), e);
             return Response.error("Lỗi máy chủ khi đóng phiên đấu giá.");
+        }
+    }
+
+    public Response deleteAuction(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            return Response.error("ID phiên đấu giá không hợp lệ.");
+        }
+        try {
+            Auction auction = auctionDAO.findById(id);
+            if (auction == null) {
+                return Response.error("Phiên đấu giá không tồn tại.");
+            }
+            if (auction.getStatus() != com.auction.shared.model.enums.AuctionStatus.FINISHED) {
+                return Response.error("Chỉ có thể xóa phiên đấu giá đã kết thúc.");
+            }
+            auctionDAO.delete(id);
+            return new Response(true, "Xóa phiên đấu giá thành công.", null);
+        } catch (com.auction.shared.exception.EntityNotFoundException e) {
+            return Response.error("Phiên đấu giá không tồn tại.");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi xóa phiên đấu giá: " + e.getMessage(), e);
+            return Response.error("Lỗi máy chủ khi xóa phiên đấu giá.");
         }
     }
 }

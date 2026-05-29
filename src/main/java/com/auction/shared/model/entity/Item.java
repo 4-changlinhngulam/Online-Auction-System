@@ -9,7 +9,12 @@ public abstract class Item extends Entity {
     private String name;
     private String description;
     private double startingPrice;
-    private String status; // PENDING, APPROVED, REJECTED, SOLD
+    private String status = "PENDING"; // PENDING, APPROVED, REJECTED, SOLD
+    private String ownerId;
+    private String ownerName;
+    private byte[] imageBytes;
+    private java.time.LocalDateTime preferredStartTime;
+    private java.time.LocalDateTime preferredEndTime;
 
     // Constructor dùng chung cho Factory
     public Item(String id, String name, double startingPrice) {
@@ -54,6 +59,46 @@ public abstract class Item extends Entity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public byte[] getImageBytes() {
+        return imageBytes;
+    }
+
+    public void setImageBytes(byte[] imageBytes) {
+        this.imageBytes = imageBytes;
+    }
+
+    public java.time.LocalDateTime getPreferredStartTime() {
+        return preferredStartTime;
+    }
+
+    public void setPreferredStartTime(java.time.LocalDateTime preferredStartTime) {
+        this.preferredStartTime = preferredStartTime;
+    }
+
+    public java.time.LocalDateTime getPreferredEndTime() {
+        return preferredEndTime;
+    }
+
+    public void setPreferredEndTime(java.time.LocalDateTime preferredEndTime) {
+        this.preferredEndTime = preferredEndTime;
     }
 
     public abstract void printInfo();

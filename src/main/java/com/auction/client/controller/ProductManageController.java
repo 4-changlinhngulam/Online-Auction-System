@@ -6,6 +6,12 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.application.Platform;
+import com.auction.shared.protocol.Request;
+import com.auction.shared.protocol.RequestType;
+import com.auction.client.network.ServerConnection;
+import com.auction.shared.model.entity.Auction;
+import java.time.LocalDateTime;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -22,6 +28,7 @@ public class ProductManageController {
     @FXML private Label messageLabel;
 
     private List<Item> myProducts = new ArrayList<>();
+    private boolean isProcessing = false;
 
     @FXML
     public void initialize() {
@@ -46,22 +53,30 @@ public class ProductManageController {
     }
 
     private void loadProducts() {
-        // --- MOCK MODE ---
-        myProducts = new ArrayList<>();
-        productTable.setItems(
-                FXCollections.observableArrayList(myProducts)
-        );
-        messageLabel.setText("Chưa có sản phẩm nào.");
-
-        // --- REAL MODE ---
-        // Request req = new Request(RequestType.GET_ALL_ITEMS, null);
-        // Response res = ServerConnection.getInstance()
-        //                                .sendRequest(req);
-        // myProducts = (List<Item>) res.getData();
+        try {
+            com.auction.shared.protocol.Request req = new com.auction.shared.protocol.Request(
+                com.auction.shared.protocol.RequestType.GET_MY_ITEMS, null);
+            com.auction.client.network.ServerConnection.getInstance().sendRequestAsync(req, res -> {
+                if (res != null && res.isSuccess() && res.getData() instanceof java.util.List) {
+                    myProducts = (java.util.List<com.auction.shared.model.entity.Item>) res.getData();
+                    productTable.setItems(javafx.collections.FXCollections.observableArrayList(myProducts));
+                    if (myProducts.isEmpty()) {
+                        messageLabel.setText("Chưa có sản phẩm nào.");
+                    } else {
+                        messageLabel.setText("");
+                    }
+                } else {
+                    messageLabel.setText("Không thể lấy dữ liệu sản phẩm.");
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
     private void handleAddProduct() {
+        ProductFormController.editingItem = null;
         SceneManager.switchTo(
                 "/com/auction/fxml/product/product-form.fxml"
         );
@@ -75,6 +90,7 @@ public class ProductManageController {
             messageLabel.setText("Vui lòng chọn sản phẩm!");
             return;
         }
+        ProductFormController.editingItem = selected;
         SceneManager.switchTo(
                 "/com/auction/fxml/product/product-form.fxml"
         );
@@ -96,19 +112,30 @@ public class ProductManageController {
         );
         confirm.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
-                myProducts.remove(selected);
-                productTable.setItems(
-                        FXCollections.observableArrayList(myProducts)
+                ServerConnection.getInstance().sendRequestAsync(
+                    new Request(RequestType.DELETE_ITEM, selected.getId()),
+                    response -> {
+                        Platform.runLater(() -> {
+                            if (response.isSuccess()) {
+                                myProducts.remove(selected);
+                                productTable.setItems(FXCollections.observableArrayList(myProducts));
+                                messageLabel.setStyle("-fx-text-fill: #00ff00;");
+                                messageLabel.setText("Xóa thành công!");
+                            } else {
+                                messageLabel.setStyle("-fx-text-fill: #ff0000;");
+                                messageLabel.setText("Xóa thất bại: " + response.getMessage());
+                            }
+                        });
+                    }
                 );
-                messageLabel.setStyle("-fx-text-fill: #00ff00;");
-                messageLabel.setText("Xóa thành công!");
-                // TODO: Request(DELETE_ITEM)
             }
         });
     }
 
     @FXML
     private void handleCreateAuction() {
+        if (isProcessing) return;
+
         Item selected = productTable.getSelectionModel()
                 .getSelectedItem();
         if (selected == null) {
@@ -117,9 +144,44 @@ public class ProductManageController {
             );
             return;
         }
-        // TODO: Request(CREATE_AUCTION)
-        messageLabel.setStyle("-fx-text-fill: #00ff00;");
-        messageLabel.setText("Tạo phiên đấu giá thành công!");
+        Auction newAuction = new Auction();
+        newAuction.setItem(selected);
+        newAuction.setCurrentPrice(selected.getStartingPrice());
+        newAuction.setStatus(com.auction.shared.model.enums.AuctionStatus.OPEN);
+        // Lấy thời gian ưu tiên từ sản phẩm
+        if (selected.getPreferredStartTime() != null) {
+            newAuction.setStartTime(selected.getPreferredStartTime());
+        } else {
+            newAuction.setStartTime(LocalDateTime.now());
+        }
+
+        if (selected.getPreferredEndTime() != null) {
+            newAuction.setEndTime(selected.getPreferredEndTime());
+        } else {
+            newAuction.setEndTime(LocalDateTime.now().plusDays(3));
+        }
+
+        isProcessing = true;
+        messageLabel.setStyle("-fx-text-fill: #ffff00;");
+        messageLabel.setText("Đang xử lý...");
+
+        ServerConnection.getInstance().sendRequestAsync(
+            new Request(RequestType.CREATE_AUCTION, newAuction),
+            response -> {
+                Platform.runLater(() -> {
+                    isProcessing = false;
+                    if (response.isSuccess()) {
+                        messageLabel.setStyle("-fx-text-fill: #00ff00;");
+                        messageLabel.setText("Tạo phiên đấu giá thành công!");
+                        // Load lại danh sách sản phẩm (có thể update trạng thái)
+                        loadProducts();
+                    } else {
+                        messageLabel.setStyle("-fx-text-fill: #ff0000;");
+                        messageLabel.setText("Tạo thất bại: " + response.getMessage());
+                    }
+                });
+            }
+        );
     }
 
     @FXML

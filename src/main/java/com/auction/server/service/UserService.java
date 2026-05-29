@@ -39,6 +39,10 @@ public class UserService {
                 throw new AuthenticationException("Sai mật khẩu.");
             }
 
+            if (user.getStatus() == com.auction.shared.model.enums.UserStatus.BANNED) {
+                throw new AuthenticationException("Tài khoản của bạn đã bị khóa bởi Quản trị viên.");
+            }
+
             user.setPassword(null);
 
             return new Response(true, "Đăng nhập thành công.", user);
@@ -142,6 +146,9 @@ public class UserService {
             User user = userDAO.findById(userId);
             if (user == null) {
                 return Response.error("Không tìm thấy người dùng.");
+            }
+            if ("ADMIN".equals(user.getRole())) {
+                return Response.error("Không thể khóa tài khoản Quản trị viên.");
             }
 
             user.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);

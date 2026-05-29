@@ -121,8 +121,6 @@ public class ItemDAO {
         classMappers.put(Art.class, artMapper);
         typeMappers.put("ART", artMapper);
     }
-
-    // 1. THÊM MỚI SẢN PHẨM (SAVE)
     public void save(Item item) throws DataPersistenceException {
         if (item == null || item.getId() == null) {
             throw new IllegalArgumentException("Item và ID không được phép null");
@@ -133,7 +131,9 @@ public class ItemDAO {
             throw new IllegalArgumentException("Loại Item không được hỗ trợ để lưu: " + item.getClass().getName());
         }
 
-        String sql = "INSERT INTO items (id, name, description, starting_price, item_type, warranty_months, mileage) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO items (id, name, description, starting_price, item_type, "
+                   + "warranty_months, mileage, owner_id, status, image_bytes, "
+                   + "preferred_start_time, preferred_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -145,6 +145,12 @@ public class ItemDAO {
 
             // Ủy quyền map thuộc tính đặc thù cho Mapper
             mapper.mapToSave(pstmt, item);
+            
+            pstmt.setString(8, item.getOwnerId());
+            pstmt.setString(9, item.getStatus());
+            pstmt.setBytes(10, item.getImageBytes());
+            pstmt.setTimestamp(11, item.getPreferredStartTime() != null ? java.sql.Timestamp.valueOf(item.getPreferredStartTime()) : null);
+            pstmt.setTimestamp(12, item.getPreferredEndTime() != null ? java.sql.Timestamp.valueOf(item.getPreferredEndTime()) : null);
 
             pstmt.executeUpdate();
             LOGGER.log(Level.INFO, "Đã lưu Sản phẩm {0} lên Database!", item.getName());
@@ -155,8 +161,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi lưu Item vào Database", e);
         }
     }
-
-    // 2. CẬP NHẬT SẢN PHẨM (UPDATE)
     public void update(Item item) throws DataPersistenceException, EntityNotFoundException {
         if (item == null || item.getId() == null) {
             throw new IllegalArgumentException("Item và ID không được phép null");
@@ -167,7 +171,9 @@ public class ItemDAO {
             throw new IllegalArgumentException("Loại Item không được hỗ trợ để cập nhật: " + item.getClass().getName());
         }
 
-        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, item_type = ?, warranty_months = ?, mileage = ? WHERE id = ?";
+        String sql = "UPDATE items SET name = ?, description = ?, starting_price = ?, "
+                   + "item_type = ?, warranty_months = ?, mileage = ?, owner_id = ?, status = ?, image_bytes = ?, "
+                   + "preferred_start_time = ?, preferred_end_time = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -179,7 +185,12 @@ public class ItemDAO {
             // Ủy quyền map thuộc tính đặc thù
             mapper.mapToUpdate(pstmt, item);
 
-            pstmt.setString(7, item.getId());
+            pstmt.setString(7, item.getOwnerId());
+            pstmt.setString(8, item.getStatus());
+            pstmt.setBytes(9, item.getImageBytes());
+            pstmt.setTimestamp(10, item.getPreferredStartTime() != null ? java.sql.Timestamp.valueOf(item.getPreferredStartTime()) : null);
+            pstmt.setTimestamp(11, item.getPreferredEndTime() != null ? java.sql.Timestamp.valueOf(item.getPreferredEndTime()) : null);
+            pstmt.setString(12, item.getId());
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected == 0) {
@@ -189,8 +200,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi cập nhật Item", e);
         }
     }
-
-    // 3. TÌM THEO ID (FIND BY ID)
     public Item findById(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "SELECT * FROM items WHERE id = ?";
 
@@ -210,8 +219,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi tìm Item theo ID", e);
         }
     }
-
-    // 4. LẤY TẤT CẢ SẢN PHẨM (FIND ALL)
     public List<Item> findAll() throws DataPersistenceException {
         List<Item> items = new ArrayList<>();
         String sql = "SELECT * FROM items";
@@ -228,8 +235,6 @@ public class ItemDAO {
         }
         return items;
     }
-
-    // 5. XÓA SẢN PHẨM (DELETE)
     public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM items WHERE id = ?";
 
@@ -245,8 +250,6 @@ public class ItemDAO {
             throw new DataPersistenceException("Lỗi khi xóa Item", e);
         }
     }
-
-    // 7. TÌM BẰNG TỪ KHÓA
     public List<Item> searchByName(String keyword) {
         List<Item> resultList = new ArrayList<>();
         String sql = "SELECT * FROM items WHERE name LIKE ?";
@@ -266,8 +269,6 @@ public class ItemDAO {
         }
         return resultList;
     }
-
-    // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
     private Item mapResultSetToItem(ResultSet rs) throws SQLException {
         String type = rs.getString("item_type");
         ItemMapper mapper = typeMappers.get(type);
@@ -284,6 +285,15 @@ public class ItemDAO {
         item.setName(rs.getString("name"));
         item.setDescription(rs.getString("description"));
         item.setStartingPrice(rs.getDouble("starting_price"));
+        item.setOwnerId(rs.getString("owner_id"));
+        item.setStatus(rs.getString("status"));
+        item.setImageBytes(rs.getBytes("image_bytes"));
+        
+        java.sql.Timestamp startTs = rs.getTimestamp("preferred_start_time");
+        if (startTs != null) item.setPreferredStartTime(startTs.toLocalDateTime());
+        
+        java.sql.Timestamp endTs = rs.getTimestamp("preferred_end_time");
+        if (endTs != null) item.setPreferredEndTime(endTs.toLocalDateTime());
 
         return item;
     }

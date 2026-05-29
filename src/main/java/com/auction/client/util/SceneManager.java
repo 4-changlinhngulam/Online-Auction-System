@@ -5,7 +5,12 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class SceneManager {
+
+    private static final Logger LOGGER = Logger.getLogger(SceneManager.class.getName());
 
     private static Stage primaryStage;
 
@@ -19,11 +24,11 @@ public class SceneManager {
                     SceneManager.class.getResource(fxmlPath)
             );
             primaryStage.setScene(new Scene(root));
+            // Thêm dòng này để cho phép dùng chuột kéo giãn cửa sổ
+            primaryStage.setResizable(true);
             primaryStage.show();
         } catch (Exception e) {
-            System.out.println("Lỗi chuyển màn hình: "
-                    + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Lỗi chuyển màn hình: " + e.getMessage(), e);
         }
     }
 }

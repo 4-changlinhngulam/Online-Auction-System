@@ -89,6 +89,31 @@ public class AuctionDetailController {
         if (currentAuction != null) {
             displayAuction(currentAuction);
             loadBidHistory();
+
+            // ================= THÊM MỚI TỪ ĐÂY =================
+
+            // 1. Gửi request báo cho Server biết: "Client này đang xem phiên đấu giá, hãy gửi thông báo cho tôi"
+            Request subscribeReq = new Request(RequestType.SUBSCRIBE_AUCTION, currentAuction.getId());
+            ServerConnection.getInstance().sendRequestAsync(subscribeReq, null);
+
+            // 2. Đăng ký nhận Broadcast (Push Notification) từ Server
+            ServerConnection.getInstance().setPushNotificationListener(response -> {
+                // Kiểm tra xem có đúng là thông báo có người đặt giá mới không
+                if ("NOTIFICATION_NEW_BID".equals(response.getMessage()) && response.getData() != null) {
+
+                    // Parse dữ liệu gửi về từ ClientHandler.java
+                    Object[] data = (Object[]) response.getData();
+                    Item item = (Item) data[0];
+                    double newPrice = (Double) data[1];
+                    String lastBidderId = (String) data[2];
+                    java.time.LocalDateTime newEndTime = (java.time.LocalDateTime) data[3];
+
+                    // Gọi hàm cập nhật giao diện (đã được bọc sẵn trong Platform.runLater)
+                    onBidUpdate(item, newPrice, lastBidderId, newEndTime);
+                }
+            });
+
+            // ====================================================
         }
     }
 
@@ -212,11 +237,26 @@ public class AuctionDetailController {
             ServerConnection.getInstance().sendRequestAsync(req, res -> {
                 Platform.runLater(() -> {
                     if (res != null && res.isSuccess()) {
-                        // Lưu ý: Việc cập nhật UI chi tiết thường được ưu tiên xử lý qua onBidUpdate (Observer)
-                        // để đồng bộ với tất cả client. Ở đây có thể chỉ cần hiển thị thông báo.
+                        // 1. Hiện thông báo thành công
                         bidErrorLabel.setStyle("-fx-text-fill: #00ff00;");
                         bidErrorLabel.setText("Đặt giá thành công!");
+
+                        // 2. Cập nhật dữ liệu giá hiện tại lên UI
+                        currentAuction.setCurrentPrice(amount);
+                        currentPriceLabel.setText(String.format("%,.0f VND", amount));
+
+                        // 3. Cập nhật người dẫn đầu là chính bạn (người dùng hiện tại)
+                        leadingBidderLabel.setText(SessionManager.getInstance().getCurrentUser().getUsername());
+
+                        // 4. Thêm điểm giá mới vào biểu đồ LineChart
+                        String currentTime = LocalDateTime.now().format(timeFormatter);
+                        updateChartData(currentTime, amount);
+
+                        // 5. Tải lại danh sách lịch sử đấu giá
+                        loadBidHistory();
+
                     } else {
+                        // Hiển thị lỗi nếu Server từ chối (vd: có người vừa đặt giá cao hơn)
                         bidErrorLabel.setStyle("-fx-text-fill: #ff0000;");
                         bidErrorLabel.setText(res != null ? res.getMessage() : "Lỗi kết nối");
                     }
@@ -309,6 +349,11 @@ public class AuctionDetailController {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
+
+        // --- THÊM DÒNG NÀY ---
+        // Gỡ bỏ Listener để Client ngưng nhận thông báo đẩy cho màn hình này
+        ServerConnection.getInstance().setPushNotificationListener(null);
+
         SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
     }
 

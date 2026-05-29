@@ -54,7 +54,7 @@ mvn exec:java -Dexec.mainClass="com.auction.client.AuctionClientApp"
 
 Dự án sử dụng JUnit 5 để thực hiện các bài kiểm tra tự động (Unit Test & Integration Test) và Checkstyle để đảm bảo tiêu chuẩn định dạng mã nguồn.
 
-### Chạy toàn bộ Test Suite (bao gồm các ca kiểm thử biên BVA)
+### Chạy toàn bộ Test Suite
 ```bash
 mvn test
 ```

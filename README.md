@@ -16,7 +16,21 @@ Client (JavaFX) ←──Socket──→ Server (Multi-threaded)
 
 ## 📁 Cấu trúc dự án
 
-Xem file `PROJECT_STRUCTURE.md` để biết chi tiết từng file.
+```
+Online-Auction-System
+├── src
+│   ├── main
+│   │   ├── java/com/auction
+│   │   │   ├── client          # Client application & JavaFX Controllers
+│   │   │   ├── server          # Server implementation, DAO, Handlers, Services
+│   │   │   └── shared          # Shared entities, enums, exceptions, protocols
+│   │   └── resources
+│   │       ├── application.properties
+│   │       └── com/auction/fxml    # FXML Layouts for Client GUI
+│   └── test                    # Unit & Integration Tests (JUnit 5)
+├── checkstyle.xml              # Checkstyle rules configuration
+└── pom.xml                     # Maven project definition
+```
 
 ## 🚀 Cách chạy
 
@@ -34,6 +48,20 @@ mvn exec:java -Dexec.mainClass="com.auction.server.AuctionServer"
 ### Chạy Client
 ```bash
 mvn exec:java -Dexec.mainClass="com.auction.client.AuctionClientApp"
+```
+
+## 🧪 Kiểm thử (Testing)
+
+Dự án sử dụng JUnit 5 để thực hiện các bài kiểm tra tự động (Unit Test & Integration Test) và Checkstyle để đảm bảo tiêu chuẩn định dạng mã nguồn.
+
+### Chạy toàn bộ Test Suite (bao gồm các ca kiểm thử biên BVA)
+```bash
+mvn test
+```
+
+### Chạy kiểm tra định dạng code (Checkstyle)
+```bash
+mvn checkstyle:check
 ```
 
 ## 👥 Phân công nhóm

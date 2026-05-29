@@ -28,6 +28,7 @@ public class ProductManageController {
     @FXML private Label messageLabel;
 
     private List<Item> myProducts = new ArrayList<>();
+    private boolean isProcessing = false;
 
     @FXML
     public void initialize() {
@@ -133,6 +134,8 @@ public class ProductManageController {
 
     @FXML
     private void handleCreateAuction() {
+        if (isProcessing) return;
+
         Item selected = productTable.getSelectionModel()
                 .getSelectedItem();
         if (selected == null) {
@@ -158,10 +161,15 @@ public class ProductManageController {
             newAuction.setEndTime(LocalDateTime.now().plusDays(3));
         }
 
+        isProcessing = true;
+        messageLabel.setStyle("-fx-text-fill: #ffff00;");
+        messageLabel.setText("Đang xử lý...");
+
         ServerConnection.getInstance().sendRequestAsync(
             new Request(RequestType.CREATE_AUCTION, newAuction),
             response -> {
                 Platform.runLater(() -> {
+                    isProcessing = false;
                     if (response.isSuccess()) {
                         messageLabel.setStyle("-fx-text-fill: #00ff00;");
                         messageLabel.setText("Tạo phiên đấu giá thành công!");

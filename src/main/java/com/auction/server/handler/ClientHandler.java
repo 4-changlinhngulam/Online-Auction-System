@@ -124,6 +124,7 @@ public class ClientHandler implements Runnable, BidObserver {
             case GET_AUCTION -> processGetAuction(req);
             case GET_ALL_AUCTIONS -> auctionService.getAllAuctions();
             case CLOSE_AUCTION -> processCloseAuction(req);
+            case DELETE_AUCTION -> processDeleteAuction(req);
 
             case PLACE_BID -> processPlaceBid(req);
             case GET_BID_HISTORY -> processGetBidHistory(req);
@@ -296,6 +297,19 @@ public class ClientHandler implements Runnable, BidObserver {
         try {
             Auction auction = (Auction) req.getPayload();
             String itemId = auction.getItem().getId();
+            
+            // Chống tạo nhiều phiên đấu giá cho cùng 1 sản phẩm
+            Response allAuctionsRes = auctionService.getAllAuctions();
+            if (allAuctionsRes.isSuccess()) {
+                @SuppressWarnings("unchecked")
+                java.util.List<Auction> allAuctions = (java.util.List<Auction>) allAuctionsRes.getData();
+                for (Auction a : allAuctions) {
+                    if (a.getItem().getId().equals(itemId) && a.getStatus() != com.auction.shared.model.enums.AuctionStatus.FINISHED) {
+                        return Response.error("Sản phẩm này đã có phiên đấu giá (OPEN/RUNNING).");
+                    }
+                }
+            }
+
             Response getRes = itemService.getItem(itemId);
             if (!getRes.isSuccess()) {
                 return Response.error("Không tìm thấy sản phẩm.");
@@ -335,9 +349,22 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processCloseAuction(Request req) {
+        if (currentUser == null || !"ADMIN".equalsIgnoreCase(currentUser.getRole()))
+            return Response.error("Chỉ Admin mới có quyền thao tác.");
         try {
             String auctionId = (String) req.getPayload();
             return auctionService.closeAuction(auctionId);
+        } catch (Exception e) {
+            return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
+        }
+    }
+
+    private Response processDeleteAuction(Request req) {
+        if (currentUser == null || !"ADMIN".equalsIgnoreCase(currentUser.getRole()))
+            return Response.error("Chỉ Admin mới có quyền thao tác.");
+        try {
+            String auctionId = (String) req.getPayload();
+            return auctionService.deleteAuction(auctionId);
         } catch (Exception e) {
             return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
         }

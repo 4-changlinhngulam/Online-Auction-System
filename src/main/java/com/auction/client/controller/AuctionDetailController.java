@@ -56,9 +56,18 @@ public class AuctionDetailController {
     @FXML private Label sellerRatingLabel;
     private Auction currentAuction;
     private Timeline countdownTimeline;
+
+    // Tham chiếu tới Controller hiện tại để nhận Push Notification từ App chính
+    private static AuctionDetailController instance;
+
+    public static AuctionDetailController getInstance() {
+        return instance;
+    }
+
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     @FXML
     public void initialize() {
+        instance = this; // Ghi nhận phiên bản đang active
         // Cấu hình UI ban đầu
         setupNumericValidation();
         autoBidInfoPane.setVisible(false);
@@ -183,6 +192,9 @@ public class AuctionDetailController {
                 return;
             }
             bidAmountField.clear();
+            placeBidButton.setDisable(true); // Khóa nút
+            bidErrorLabel.setText("Đang đặt giá...");
+            
             Request req = new Request(RequestType.PLACE_BID,
                     new Object[] {
                             currentAuction.getId(),
@@ -191,6 +203,7 @@ public class AuctionDetailController {
                     });
             ServerConnection.getInstance().sendRequestAsync(req, res -> {
                 Platform.runLater(() -> {
+                    placeBidButton.setDisable(false); // Mở khóa
                     if (res != null && res.isSuccess()) {
                         // Lưu ý: Việc cập nhật UI chi tiết thường được ưu tiên xử lý qua onBidUpdate (Observer)
                         // để đồng bộ với tất cả client. Ở đây có thể chỉ cần hiển thị thông báo.

@@ -36,6 +36,8 @@ public class ProductFormController {
 
     public static Item editingItem; // Thêm cờ để biết là đang tạo mới hay sửa
 
+    private boolean isSaving = false; // Ngăn người dùng click đúp (double-click) liên tục
+
 
     @FXML private TextField nameField;
     @FXML private TextArea descField;
@@ -131,6 +133,8 @@ public class ProductFormController {
 
     @FXML
     private void handleSave() {
+        if (isSaving) return; // Nếu đang xử lý lưu rồi thì bỏ qua cú click tiếp theo
+
         String name = nameField.getText().trim();
         String desc = descField.getText().trim();
         String category = categoryCombo.getValue();
@@ -229,10 +233,17 @@ public class ProductFormController {
 
             RequestType reqType = (editingItem != null) ? RequestType.UPDATE_ITEM : RequestType.CREATE_ITEM;
 
+            isSaving = true; // Bật cờ khóa nút Lưu lại
+            errorLabel.setStyle("-fx-text-fill: #ffff00;");
+            errorLabel.setText("Đang xử lý...");
+
             ServerConnection.getInstance().sendRequestAsync(
                     new Request(reqType, item),
                     response -> {
                         Platform.runLater(() -> {
+                            isSaving = false; // Mở khóa cờ khi có kết quả
+                            errorLabel.setStyle("-fx-text-fill: #ff0000;"); // Trả lại màu lỗi mặc định
+                            
                             if (response.isSuccess()) {
                                 showAlert(Alert.AlertType.INFORMATION, "Thành công", 
                                         editingItem != null ? "Cập nhật sản phẩm thành công, chờ Admin duyệt lại!" : "Lưu sản phẩm thành công!");

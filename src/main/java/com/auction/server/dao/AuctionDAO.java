@@ -172,18 +172,33 @@ public class AuctionDAO {
     }
 
     public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
-        String sql = "DELETE FROM auctions WHERE id = ?";
+        String deleteBidsSql = "DELETE FROM bid_transactions WHERE auction_id = ?";
+        String deleteAuctionSql = "DELETE FROM auctions WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getInstance().getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Xóa lịch sử cược trước
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteBidsSql)) {
+                    pstmt.setString(1, id);
+                    pstmt.executeUpdate();
+                }
 
-            pstmt.setString(1, id);
-            int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected == 0) {
-                throw new EntityNotFoundException("Không thể xóa: Không tìm thấy phiên đấu giá ID '" + id + "'");
+                // Xóa phiên đấu giá
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteAuctionSql)) {
+                    pstmt.setString(1, id);
+                    int rowsAffected = pstmt.executeUpdate();
+                    if (rowsAffected == 0) {
+                        conn.rollback();
+                        throw new EntityNotFoundException("Không thể xóa: Không tìm thấy phiên đấu giá ID '" + id + "'");
+                    }
+                }
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
             }
-
         } catch (SQLException e) {
             throw new DataPersistenceException("Lỗi khi xóa Auction khỏi Database", e);
         }

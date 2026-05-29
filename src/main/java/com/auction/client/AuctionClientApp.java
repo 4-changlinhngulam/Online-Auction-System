@@ -1,5 +1,6 @@
 package com.auction.client;
 
+import com.auction.client.controller.AuctionDetailController;
 import com.auction.client.network.ServerConnection;
 import com.auction.client.util.SceneManager;
 import javafx.application.Application;
@@ -36,6 +37,14 @@ public class AuctionClientApp {
                         String message = String.format("Có người vừa đặt lên: %,.0f VND", newPrice);
 
                         com.auction.client.util.NotificationUtil.showPushNotification(title, message);
+
+                        // Cập nhật giao diện chi tiết phiên đấu giá (nếu người dùng đang mở trang đó)
+                        AuctionDetailController controller = AuctionDetailController.getInstance();
+                        if (controller != null) {
+                            String lastBidderId = (String) data[2];
+                            java.time.LocalDateTime newEndTime = (java.time.LocalDateTime) data[3];
+                            controller.onBidUpdate(item, newPrice, lastBidderId, newEndTime);
+                        }
                     }
                 });
             } catch (Exception e) {

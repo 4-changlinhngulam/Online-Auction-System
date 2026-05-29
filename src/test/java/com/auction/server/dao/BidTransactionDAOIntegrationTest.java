@@ -29,7 +29,9 @@ class BidTransactionDAOIntegrationTest {
                 "bidder_id VARCHAR(50), " +
                 "amount DOUBLE, " +
                 "timestamp TIMESTAMP)");
-        stmt.execute("TRUNCATE TABLE bid_history");
+        stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
+        stmt.execute("TRUNCATE TABLE bid_transactions");
+        stmt.execute("SET FOREIGN_KEY_CHECKS = 1");
     }
 
     @Test

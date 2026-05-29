@@ -70,10 +70,12 @@ class AuctionManagerTest {
                     "amount DOUBLE, " +
                     "timestamp TIMESTAMP)");
 
+            stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
             stmt.execute("TRUNCATE TABLE bid_history");
             stmt.execute("TRUNCATE TABLE auctions");
             stmt.execute("TRUNCATE TABLE items");
             stmt.execute("TRUNCATE TABLE users");
+            stmt.execute("SET FOREIGN_KEY_CHECKS = 1");
         }
     }
 

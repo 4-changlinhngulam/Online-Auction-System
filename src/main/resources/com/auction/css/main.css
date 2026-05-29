@@ -160,3 +160,32 @@
 .nav-btn-accent:hover {
     -fx-background-color: #e0a800;
 }
+
+/* ===== STYLING CHO BI?U Ð? DI?N BI?N GIÁ ===== */
+.bid-chart .chart-legend-item {
+    -fx-text-fill: #333333;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+.bid-chart .default-color0.chart-series-line {
+    -fx-stroke: #e65100; /* Cam ð?m - d? nh?n hõn */
+    -fx-stroke-width: 3px;
+}
+.bid-chart .default-color0.chart-line-symbol {
+    -fx-background-color: #e65100, white;
+    -fx-padding: 4px;
+}
+
+.bid-chart .axis {
+    -fx-tick-label-fill: #ffffff; /* Ð?i màu s? và ch? d?c các tr?c thành màu tr?ng */
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+.bid-chart .axis-label {
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+.bid-chart .chart-plot-background {
+    -fx-background-color: rgba(0, 0, 0, 0.4); /* Làm t?i n?n ph?n v? ð? th? m?t chút ð? ðý?ng giá và ch? n?i lên */
+}

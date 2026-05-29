@@ -81,6 +81,21 @@ public class AuctionManager {
         return new Response(true, "Cài đặt Auto-bid thành công.", null);
     }
 
+    public Response cancelAutoBid(String auctionId, String bidderId) {
+        if (!activeAuctions.containsKey(auctionId)) {
+            return new Response(false, "Phiên đấu giá không tồn tại.", null);
+        }
+
+        List<AutoBidConfig> configs = autoBids.get(auctionId);
+        if (configs != null) {
+            synchronized (configs) {
+                configs.removeIf(config -> config.getBidderId().equals(bidderId));
+            }
+        }
+
+        return new Response(true, "Đã hủy Auto-bid thành công.", null);
+    }
+
     public void init() {
         LOGGER.info("Đang khôi phục các phiên đấu giá từ Database...");
         List<Auction> openAuctions = auctionDAO.getOpenAuctions();

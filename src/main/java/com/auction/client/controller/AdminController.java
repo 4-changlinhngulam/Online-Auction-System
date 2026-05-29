@@ -214,7 +214,8 @@ public class AdminController {
                 if (res != null && res.isSuccess()) {
                     userMessageLabel.setStyle("-fx-text-fill: #00ff00;");
                     userMessageLabel.setText("Đã khóa tài khoản thành công: " + selected.getUsername());
-                    // Cập nhật giao diện (tuỳ chọn refresh table nếu Server trả về dữ liệu mới)
+                    selected.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);
+                    userTable.refresh();
                 } else {
                     userMessageLabel.setStyle("-fx-text-fill: #ff6b6b;");
                     userMessageLabel.setText("Lỗi khóa: " + (res != null ? res.getMessage() : "Không phản hồi"));

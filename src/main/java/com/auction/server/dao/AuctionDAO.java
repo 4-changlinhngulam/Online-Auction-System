@@ -28,8 +28,6 @@ public class AuctionDAO {
 
     private static final Logger LOGGER = Logger.getLogger(AuctionDAO.class.getName());
 
-    // 1. HÀM THÊM MỚI (SAVE)
-
     public void save(Auction auction) throws DataPersistenceException {
         if (auction == null || auction.getId() == null) {
             throw new IllegalArgumentException("Auction và ID không được phép null");
@@ -78,8 +76,6 @@ public class AuctionDAO {
         }
     }
 
-    // 2. HÀM CẬP NHẬT (UPDATE)
-
     public void update(Auction auction) throws DataPersistenceException, EntityNotFoundException {
         if (auction == null || auction.getId() == null) {
             throw new IllegalArgumentException("Auction và ID không được phép null");
@@ -118,19 +114,18 @@ public class AuctionDAO {
         }
     }
 
-    // 3. LẤY TẤT CẢ PHIÊN ĐẤU GIÁ (FIND ALL)
-
     public List<Auction> findAll() throws DataPersistenceException {
         List<Auction> auctions = new ArrayList<>();
         // - Lỗi N+1 Query cũ: Dùng vòng lặp while(rs.next()) gọi thêm 2 câu SELECT
         // (findById) làm chậm hệ thống.
         // - Khắc phục: Sử dụng JOIN (INNER JOIN items, LEFT JOIN users) để lấy toàn bộ
         // dữ liệu trong 1 câu truy vấn.
-        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
-                + "u.username as winner_username "
+        String sql = "SELECT a.*, i.owner_id, i.image_bytes, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username, owner.username as owner_username "
                 + "FROM auctions a "
                 + "JOIN items i ON a.item_id = i.id "
-                + "LEFT JOIN users u ON a.current_winner_id = u.id";
+                + "LEFT JOIN users u ON a.current_winner_id = u.id "
+                + "LEFT JOIN users owner ON i.owner_id = owner.id";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -145,19 +140,18 @@ public class AuctionDAO {
         return auctions;
     }
 
-    // 4. TÌM THEO ID (FIND BY ID)
-
     public Auction findById(String id) throws DataPersistenceException, EntityNotFoundException {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("ID tìm kiếm không hợp lệ.");
         }
 
         // Tối ưu N+1 Query tương tự như findAll
-        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
-                + "u.username as winner_username "
+        String sql = "SELECT a.*, i.owner_id, i.image_bytes, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username, owner.username as owner_username "
                 + "FROM auctions a "
                 + "JOIN items i ON a.item_id = i.id "
                 + "LEFT JOIN users u ON a.current_winner_id = u.id "
+                + "LEFT JOIN users owner ON i.owner_id = owner.id "
                 + "WHERE a.id = ?";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
@@ -177,8 +171,6 @@ public class AuctionDAO {
         }
     }
 
-    // 5. XÓA (DELETE)
-
     public void delete(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM auctions WHERE id = ?";
 
@@ -196,15 +188,14 @@ public class AuctionDAO {
             throw new DataPersistenceException("Lỗi khi xóa Auction khỏi Database", e);
         }
     }
-
-    // 6. LẤY CÁC PHIÊN ĐẤU GIÁ MỞ (getOpenAuctions)
     public List<Auction> getOpenAuctions() {
         List<Auction> openAuctions = new ArrayList<>();
-        String sql = "SELECT a.*, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
-                + "u.username as winner_username "
+        String sql = "SELECT a.*, i.owner_id, i.image_bytes, i.name as item_name, i.description as item_desc, i.starting_price, i.item_type, "
+                + "u.username as winner_username, owner.username as owner_username "
                 + "FROM auctions a "
                 + "JOIN items i ON a.item_id = i.id "
                 + "LEFT JOIN users u ON a.current_winner_id = u.id "
+                + "LEFT JOIN users owner ON i.owner_id = owner.id "
                 + "WHERE a.status IN ('OPEN', 'RUNNING')";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
@@ -221,8 +212,6 @@ public class AuctionDAO {
 
         return openAuctions;
     }
-
-    // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
     private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
         Auction auction = new Auction();
         auction.setId(rs.getString("id"));
@@ -235,8 +224,6 @@ public class AuctionDAO {
         if (rs.getTimestamp("end_time") != null) {
             auction.setEndTime(rs.getTimestamp("end_time").toLocalDateTime());
         }
-
-        // --- Xử lý ghép nối Item trực tiếp từ ResultSet JOIN ---
         String itemTypeStr = rs.getString("item_type");
         ItemType itemType = ItemType.valueOf(itemTypeStr);
         String itemId = rs.getString("item_id");
@@ -245,10 +232,11 @@ public class AuctionDAO {
 
         Item item = ItemFactory.createItem(itemType, itemId, itemName, startingPrice);
         item.setDescription(rs.getString("item_desc"));
+        item.setOwnerId(rs.getString("owner_id"));
+        item.setOwnerName(rs.getString("owner_username"));
+        item.setImageBytes(rs.getBytes("image_bytes"));
 
         auction.setItem(item);
-
-        // --- Xử lý ghép nối Winner trực tiếp từ ResultSet JOIN ---
         String winnerId = rs.getString("current_winner_id");
         if (winnerId != null) {
             Bidder winner = new Bidder();

@@ -41,8 +41,6 @@ public class RegisterController {
         String password        = passwordField.getText().trim();
         String confirmPassword = confirmPasswordField.getText().trim();
         String role            = roleComboBox.getValue();
-
-        // --- Validation ---
         if (fullName.isEmpty() || email.isEmpty()
                 || password.isEmpty() || confirmPassword.isEmpty()) {
             showError("Vui lòng nhập đầy đủ thông tin!");
@@ -60,8 +58,6 @@ public class RegisterController {
             showError("Mật khẩu phải có ít nhất 6 ký tự!");
             return;
         }
-
-        // --- Tạo đối tượng User tương ứng với role ---
         User newUser;
         if ("SELLER".equals(role)) {
             newUser = new Seller(fullName, password, email);
@@ -76,8 +72,6 @@ public class RegisterController {
         registerButton.setDisable(true);
         errorLabel.setStyle("-fx-text-fill: #aaaaaa;");
         errorLabel.setText("Đang xử lý...");
-
-        // --- Gửi Request lên Server ---
         Request request = new Request(RequestType.REGISTER, newUser);
 
         ServerConnection.getInstance().sendRequestAsync(request, response -> {

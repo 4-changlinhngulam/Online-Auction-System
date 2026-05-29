@@ -66,11 +66,9 @@ class AuctionDAOIntegrationTest {
                 "status VARCHAR(20))");
 
         // Dọn sạch bảng
-        stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
         stmt.execute("TRUNCATE TABLE auctions");
         stmt.execute("TRUNCATE TABLE items");
         stmt.execute("TRUNCATE TABLE users");
-        stmt.execute("SET FOREIGN_KEY_CHECKS = 1");
     }
 
     @Test

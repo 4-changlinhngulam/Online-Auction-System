@@ -37,9 +37,7 @@ class ItemDAOIntegrationTest {
                 "image_bytes BLOB, " +
                 "preferred_start_time TIMESTAMP, " +
                 "preferred_end_time TIMESTAMP)");
-        stmt.execute("SET FOREIGN_KEY_CHECKS = 0");
         stmt.execute("TRUNCATE TABLE items");
-        stmt.execute("SET FOREIGN_KEY_CHECKS = 1");
     }
 
     @Test

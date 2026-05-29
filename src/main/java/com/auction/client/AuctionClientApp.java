@@ -24,6 +24,20 @@ public class AuctionClientApp {
             try {
                 ServerConnection.getInstance().connect();
                 LOGGER.info("Đã kết nối tới Server thành công!");
+
+                // Đăng ký nhận Push Notification toàn cục
+                ServerConnection.getInstance().setPushNotificationListener(res -> {
+                    if ("NOTIFICATION_NEW_BID".equals(res.getMessage())) {
+                        Object[] data = (Object[]) res.getData();
+                        com.auction.shared.model.entity.Item item = (com.auction.shared.model.entity.Item) data[0];
+                        double newPrice = (Double) data[1];
+
+                        String title = "Giá mới: " + item.getName();
+                        String message = String.format("Có người vừa đặt lên: %,.0f VND", newPrice);
+
+                        com.auction.client.util.NotificationUtil.showPushNotification(title, message);
+                    }
+                });
             } catch (Exception e) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Lỗi kết nối");

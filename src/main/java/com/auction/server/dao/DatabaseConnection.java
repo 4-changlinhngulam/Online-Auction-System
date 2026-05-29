@@ -20,15 +20,21 @@ public class DatabaseConnection {
 
     // Khối static: Sẽ tự động chạy 1 lần duy nhất khi class này được gọi đến
     static {
-        try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream("application.properties")) {
+        String configFileName = "application.properties";
+        // Nếu tồn tại file cấu hình test, ưu tiên sử dụng nó để kết nối tới database ảo
+        if (DatabaseConnection.class.getClassLoader().getResource("application-test.properties") != null) {
+            configFileName = "application-test.properties";
+        }
+
+        try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream(configFileName)) {
 
             Properties prop = new Properties();
 
             if (input == null) {
                 Logger.getLogger(DatabaseConnection.class.getName())
-                      .log(Level.SEVERE, "LỖI NGHIÊM TRỌNG: Không tìm thấy file application.properties! "
+                      .log(Level.SEVERE, "LỖI NGHIÊM TRỌNG: Không tìm thấy file " + configFileName + "! "
                                        + "Vui lòng copy file application.properties.example, "
-                                       + "đổi tên và điền mật khẩu.");
+                                       + "đổi tên thành application.properties và điền mật khẩu.");
             } else {
                 // Tải thông tin từ file properties vào bộ nhớ
                 prop.load(input);

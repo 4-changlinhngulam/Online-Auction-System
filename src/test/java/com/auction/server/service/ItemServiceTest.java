@@ -1,7 +1,6 @@
 package com.auction.server.service;
 
 import com.auction.server.dao.ItemDAO;
-import com.auction.shared.exception.EntityNotFoundException;
 import com.auction.shared.model.entity.Electronics;
 import com.auction.shared.model.entity.Item;
 import com.auction.shared.protocol.Response;
@@ -27,7 +26,6 @@ class ItemServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Tự tiêm DAO giả vào
         itemService = new ItemService(itemDAO);
     }
 

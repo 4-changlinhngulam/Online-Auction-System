@@ -27,9 +27,9 @@ class UserServiceTest {
         userService = new UserService(userDAO);
     }
 
-    // ==========================================
+    // ================================================
     // TEST LOGIN
-    // ==========================================
+    // ================================================
     @Test
     @DisplayName("Đăng nhập: Thành công")
     void testLogin_Success() throws Exception {
@@ -51,9 +51,9 @@ class UserServiceTest {
         assertEquals("Tên đăng nhập và mật khẩu không được để trống.", response.getMessage());
     }
 
-    // ==========================================
+    // ================================================
     // TEST REGISTER
-    // ==========================================
+    // ================================================
     @Test
     @DisplayName("Đăng ký: Thành công")
     void testRegister_Success() {
@@ -86,9 +86,9 @@ class UserServiceTest {
         verify(userDAO, never()).save(any(User.class)); // Đảm bảo không lưu xuống DB
     }
 
-    // ==========================================
+    // ================================================
     // TEST GET USER BY ID
-    // ==========================================
+    // ================================================
     @Test
     @DisplayName("Lấy User bằng ID: Thành công")
     void testGetUserById_Success() {

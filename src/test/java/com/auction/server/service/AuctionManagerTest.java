@@ -145,8 +145,8 @@ class AuctionManagerTest {
     }
 
     @Test
-    @DisplayName("Test logic chống nhảy giá phút chót - Anti-sniping (kéo dài thời gian đấu giá)")
-    void testAntiSnipingLogic() throws Exception {
+    @DisplayName("Test BVA logic Anti-sniping: Gia hạn khi trong biên [0, 300) giây")
+    void testAntiSnipingLogic_BVA_Extend() throws Exception {
         Bidder bidder = new Bidder("bidder2", "pass", "b2@gmail.com");
         bidder.setId("BIDDER_AM_02");
         userDAO.save(bidder);
@@ -157,8 +157,8 @@ class AuctionManagerTest {
         item.setStartingPrice(300.0);
         itemDAO.save(item);
 
-        // Tạo phiên đấu giá kết thúc sau 1 phút (ít hơn 3 phút, tức 180 giây)
-        LocalDateTime initialEndTime = LocalDateTime.now().plusMinutes(1);
+        // Biên trên hợp lệ: còn đúng 299 giây (hoặc ít hơn do trễ thực thi)
+        LocalDateTime initialEndTime = LocalDateTime.now().plusSeconds(299);
 
         Auction auction = new Auction();
         auction.setId("AUC_AM_03");
@@ -171,13 +171,49 @@ class AuctionManagerTest {
 
         auctionManager.addAuction(auction);
 
-        // Đặt giá thầu
-        Response response = auctionManager.processNewBid("AUC_AM_03", "BIDDER_AM_02", 350.0);
+        // Đặt giá thầu (cần đặt lớn hơn currentPrice + minStep. minStep của 300.0 là max(1.0, 3.0) = 3.0. Nên đặt 310.0)
+        Response response = auctionManager.processNewBid("AUC_AM_03", "BIDDER_AM_02", 310.0);
         assertTrue(response.isSuccess());
 
-        // Kiểm tra xem thời gian kết thúc có được kéo dài thêm 3 phút (180 giây) hay không
+        // Kiểm tra xem thời gian kết thúc có được kéo dài thêm 5 phút (300 giây) hay không
         Auction updated = auctionDAO.findById("AUC_AM_03");
         assertTrue(updated.getEndTime().isAfter(initialEndTime));
+    }
+
+    @Test
+    @DisplayName("Test BVA logic Anti-sniping: Không gia hạn khi ngoài biên (>= 300 giây)")
+    void testAntiSnipingLogic_BVA_NoExtend() throws Exception {
+        Bidder bidder = new Bidder("bidder3", "pass", "b3@gmail.com");
+        bidder.setId("BIDDER_AM_03");
+        userDAO.save(bidder);
+
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_04");
+        item.setName("Tablet 2");
+        item.setStartingPrice(300.0);
+        itemDAO.save(item);
+
+        // Ngoài biên trên: còn 305 giây
+        LocalDateTime initialEndTime = LocalDateTime.now().plusSeconds(305);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_04");
+        auction.setItem(item);
+        auction.setCurrentPrice(300.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now().minusHours(1));
+        auction.setEndTime(initialEndTime);
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // Đặt giá thầu
+        Response response = auctionManager.processNewBid("AUC_AM_04", "BIDDER_AM_03", 310.0);
+        assertTrue(response.isSuccess());
+
+        // Kiểm tra xem thời gian kết thúc giữ nguyên
+        Auction updated = auctionDAO.findById("AUC_AM_04");
+        assertEquals(initialEndTime.getSecond(), updated.getEndTime().getSecond());
     }
 
     @Test
@@ -270,8 +306,8 @@ class AuctionManagerTest {
     }
 
     @Test
-    @DisplayName("Test Auto-bid không kích hoạt khi giá vượt mức giới hạn (limit)")
-    void testAutoBidTrigger_LimitReached() throws Exception {
+    @DisplayName("Test BVA Auto-bid không kích hoạt khi maxAmount sát biên dưới của nextBid (BVA: maxAmount = nextBid - 0.01)")
+    void testAutoBidTrigger_BVA_LimitNotReached() throws Exception {
         // 1. Tạo và lưu 2 bidder
         Bidder bidderA = new Bidder("bidderA2", "pass", "a2@gmail.com");
         bidderA.setId("USER_AM_AUTO_03");
@@ -299,18 +335,69 @@ class AuctionManagerTest {
 
         auctionManager.addAuction(auction);
 
-        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 602000 (nhỏ hơn mức giá tiếp theo là 605000)
-        auctionManager.registerAutoBid("AUC_AM_AUTO_02", "USER_AM_AUTO_03", 602000.0);
+        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 604999.99 (nhỏ hơn mức giá tiếp theo 605000.0 đúng 0.01)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_02", "USER_AM_AUTO_03", 604999.99);
 
-        // 4. Bidder B đặt giá thủ công 600000
+        // 4. Bidder B đặt giá thủ công 600000 (giá tiếp theo mong đợi là 605000)
         Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_02", "USER_AM_AUTO_04", 600000.0);
         assertTrue(bidResponse.isSuccess());
 
-        // 5. Chờ một lát xem Auto-bid có kích hoạt không (không được kích hoạt)
+        // 5. Chờ xem Auto-bid có bị kích hoạt không (không được kích hoạt)
         Thread.sleep(300);
         Auction updated = auctionDAO.findById("AUC_AM_AUTO_02");
         assertEquals(600000.0, updated.getCurrentPrice());
         assertEquals("USER_AM_AUTO_04", updated.getCurrentWinner().getId());
+    }
+
+    @Test
+    @DisplayName("Test BVA Auto-bid kích hoạt thành công khi maxAmount bằng đúng nextBid (BVA: maxAmount = nextBid)")
+    void testAutoBidTrigger_BVA_ExactlyLimit() throws Exception {
+        // 1. Tạo và lưu 2 bidder
+        Bidder bidderA = new Bidder("bidderA2_exact", "pass", "a2exact@gmail.com");
+        bidderA.setId("USER_AM_AUTO_03_EXACT");
+        userDAO.save(bidderA);
+
+        Bidder bidderB = new Bidder("bidderB2_exact", "pass", "b2exact@gmail.com");
+        bidderB.setId("USER_AM_AUTO_04_EXACT");
+        userDAO.save(bidderB);
+
+        // 2. Tạo sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_AUTO_02_EXACT");
+        item.setName("Tablet Exact");
+        item.setStartingPrice(500000.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_AUTO_02_EXACT");
+        auction.setItem(item);
+        auction.setCurrentPrice(500000.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 605000.0 (bằng đúng nextBid 605000.0)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_02_EXACT", "USER_AM_AUTO_03_EXACT", 605000.0);
+
+        // 4. Bidder B đặt giá thủ công 600000
+        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_02_EXACT", "USER_AM_AUTO_04_EXACT", 600000.0);
+        assertTrue(bidResponse.isSuccess());
+
+        // 5. Chờ luồng Auto-bid xử lý bất đồng bộ
+        boolean autoBidExecuted = false;
+        for (int i = 0; i < 20; i++) {
+            Thread.sleep(50);
+            Auction updated = auctionDAO.findById("AUC_AM_AUTO_02_EXACT");
+            if (updated.getCurrentPrice() == 605000.0 && "USER_AM_AUTO_03_EXACT".equals(updated.getCurrentWinner().getId())) {
+                autoBidExecuted = true;
+                break;
+            }
+        }
+
+        assertTrue(autoBidExecuted, "Auto-bid phải tự động được kích hoạt vì maxAmount bằng đúng nextBid");
     }
 
     @Test

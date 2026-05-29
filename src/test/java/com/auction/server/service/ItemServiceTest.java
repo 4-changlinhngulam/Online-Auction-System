@@ -44,16 +44,34 @@ class ItemServiceTest {
     }
 
     @Test
-    @DisplayName("Tạo Item: Thất bại do giá khởi điểm <= 0")
-    void testCreateItem_Fail_InvalidPrice() {
-        Item item = new Electronics("ITM_01", "Hàng lỗi", -50.0);
+    @DisplayName("Tạo Item: Thất bại khi giá khởi điểm biên bằng hoặc biên dưới sát nút (BVA: <= 0)")
+    void testCreateItem_BVA_InvalidPrices() {
+        // Biên bằng: 0.0
+        Item itemZero = new Electronics("ITM_01", "Hàng biên 0", 0.0);
+        Response responseZero = itemService.createItem(itemZero);
+        assertFalse(responseZero.isSuccess());
+        assertEquals("Giá khởi điểm phải lớn hơn 0.", responseZero.getMessage());
 
-        Response response = itemService.createItem(item);
+        // Biên dưới: -0.01
+        Item itemNegative = new Electronics("ITM_01", "Hàng biên âm", -0.01);
+        Response responseNegative = itemService.createItem(itemNegative);
+        assertFalse(responseNegative.isSuccess());
+        assertEquals("Giá khởi điểm phải lớn hơn 0.", responseNegative.getMessage());
 
-        assertFalse(response.isSuccess());
-        assertEquals("Giá khởi điểm phải lớn hơn 0.", response.getMessage());
-        // Phải đảm bảo không có lệnh save nào được chạy xuống DB
         verify(itemDAO, never()).save(any(Item.class));
+    }
+
+    @Test
+    @DisplayName("Tạo Item: Thành công khi giá khởi điểm biên trên sát nút (BVA: > 0)")
+    void testCreateItem_BVA_ValidBoundaryPrice() throws Exception {
+        // Biên trên: 0.01
+        Item itemValid = new Electronics("ITM_01", "Hàng biên dương nhỏ", 0.01);
+        doNothing().when(itemDAO).save(any(Item.class));
+
+        Response response = itemService.createItem(itemValid);
+
+        assertTrue(response.isSuccess());
+        verify(itemDAO, times(1)).save(itemValid);
     }
 
     @Test

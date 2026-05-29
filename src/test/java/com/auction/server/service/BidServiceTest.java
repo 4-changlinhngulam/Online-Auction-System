@@ -61,15 +61,33 @@ class BidServiceTest {
     }
 
     @Test
-    @DisplayName("Đặt giá: Thất bại do nhập số tiền âm hoặc bằng 0")
-    void testPlaceBid_Fail_InvalidAmount() {
-        Response responseNegative = bidService.placeBid("AUC_123", "USR_001", -500.0);
+    @DisplayName("Đặt giá: Thất bại do nhập số tiền biên dưới hoặc biên bằng (BVA: <= 0)")
+    void testPlaceBid_BVA_InvalidAmount() {
+        // Biên dưới: -0.01
+        Response responseNegative = bidService.placeBid("AUC_123", "USR_001", -0.01);
         assertFalse(responseNegative.isSuccess());
         assertEquals("Số tiền đặt giá phải lớn hơn 0.", responseNegative.getMessage());
 
+        // Biên bằng: 0.0
         Response responseZero = bidService.placeBid("AUC_123", "USR_001", 0.0);
         assertFalse(responseZero.isSuccess());
         assertEquals("Số tiền đặt giá phải lớn hơn 0.", responseZero.getMessage());
+
+        verify(auctionManager, never()).processNewBid(anyString(), anyString(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("Đặt giá: Thành công khi số tiền biên trên sát nút (BVA: > 0)")
+    void testPlaceBid_BVA_ValidBoundaryAmount() {
+        // Biên trên: 0.01
+        when(auctionManager.processNewBid("AUC_123", "USR_001", 0.01))
+                .thenReturn(new Response(true, "Đặt giá thành công!", null));
+
+        Response response = bidService.placeBid("AUC_123", "USR_001", 0.01);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Đặt giá thành công!", response.getMessage());
+        verify(auctionManager, times(1)).processNewBid("AUC_123", "USR_001", 0.01);
     }
 
     // ==========================================

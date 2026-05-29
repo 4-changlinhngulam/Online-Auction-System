@@ -35,23 +35,29 @@ class   AuctionServiceTest {
         mockBidder.setName("NguoiMuaTest");
     }
     @Test
-    @DisplayName("Nên đặt giá thành công khi số tiền hợp lệ")
-    void testPlaceBid_ValidAmount_ShouldSucceed() {
-        double bidAmount = 2500;
+    @DisplayName("Nên đặt giá thành công khi số tiền biên trên sát nút (BVA: > currentPrice)")
+    void testPlaceBid_BVA_ValidBoundaryAmount() {
+        double bidAmount = 2000.01;
         boolean result = mockAuction.handleNewBid(mockBidder, bidAmount);
 
-        assertTrue(result, "Việc đặt giá phải thành công");
+        assertTrue(result, "Việc đặt giá biên trên phải thành công");
         assertEquals(bidAmount, mockAuction.getCurrentPrice());
         assertEquals(mockBidder, mockAuction.getCurrentWinner());
     }
     @Test
-    @DisplayName("Nên thất bại khi đặt giá thấp hơn hoặc bằng giá hiện tại")
-    void testPlaceBid_AmountLowerThanCurrent_ShouldThrowInvalidBidException() {
-        double lowerBid = 1500;
-        boolean result = mockAuction.handleNewBid(mockBidder, lowerBid);
+    @DisplayName("Nên thất bại khi đặt giá biên bằng hoặc biên dưới sát nút (BVA: <= currentPrice)")
+    void testPlaceBid_BVA_InvalidBoundaryAmounts() {
+        // Biên bằng: 2000.0
+        double equalBid = 2000.0;
+        boolean resultEqual = mockAuction.handleNewBid(mockBidder, equalBid);
+        assertFalse(resultEqual, "Không được phép đặt giá bằng giá hiện tại");
 
-        assertFalse(result, "Không được phép dặt giá thấp hơn giá hiện tại");
-        assertEquals(2000, mockAuction.getCurrentPrice(), "Giá hiện tại không được thay đổi" );
+        // Biên dưới: 1999.99
+        double lowerBid = 1999.99;
+        boolean resultLower = mockAuction.handleNewBid(mockBidder, lowerBid);
+        assertFalse(resultLower, "Không được phép đặt giá thấp hơn giá hiện tại");
+
+        assertEquals(2000.0, mockAuction.getCurrentPrice(), "Giá hiện tại không được thay đổi" );
     }
     @Test
     @DisplayName("Nên thất bại khi phiên đấu giá đã đóng")

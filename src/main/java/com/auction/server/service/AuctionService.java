@@ -91,4 +91,26 @@ public class AuctionService {
             return Response.error("Lỗi máy chủ khi đóng phiên đấu giá.");
         }
     }
+
+    public Response deleteAuction(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            return Response.error("ID phiên đấu giá không hợp lệ.");
+        }
+        try {
+            Auction auction = auctionDAO.findById(id);
+            if (auction == null) {
+                return Response.error("Phiên đấu giá không tồn tại.");
+            }
+            if (auction.getStatus() != com.auction.shared.model.enums.AuctionStatus.FINISHED) {
+                return Response.error("Chỉ có thể xóa phiên đấu giá đã kết thúc.");
+            }
+            auctionDAO.delete(id);
+            return new Response(true, "Xóa phiên đấu giá thành công.", null);
+        } catch (com.auction.shared.exception.EntityNotFoundException e) {
+            return Response.error("Phiên đấu giá không tồn tại.");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Lỗi xóa phiên đấu giá: " + e.getMessage(), e);
+            return Response.error("Lỗi máy chủ khi xóa phiên đấu giá.");
+        }
+    }
 }

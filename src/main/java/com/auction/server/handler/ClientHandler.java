@@ -124,6 +124,7 @@ public class ClientHandler implements Runnable, BidObserver {
             case GET_AUCTION -> processGetAuction(req);
             case GET_ALL_AUCTIONS -> auctionService.getAllAuctions();
             case CLOSE_AUCTION -> processCloseAuction(req);
+            case DELETE_AUCTION -> processDeleteAuction(req);
 
             case PLACE_BID -> processPlaceBid(req);
             case GET_BID_HISTORY -> processGetBidHistory(req);
@@ -132,12 +133,11 @@ public class ClientHandler implements Runnable, BidObserver {
             case GET_ALL_USERS -> userService.getAllUsers();
             case SUBSCRIBE_AUCTION -> processSubscribeAuction(req);
             case SETUP_AUTO_BID -> processSetupAutoBid(req);
+            case CANCEL_AUTO_BID -> processCancelAutoBid(req);
 
             default -> Response.error("RequestType không được hỗ trợ: " + req.getType());
         };
     }
-
-    // --- CÁC HÀM XỬ LÝ USER SERVICE ---
 
     private Response processLogin(Request req) {
         try {
@@ -169,8 +169,6 @@ public class ClientHandler implements Runnable, BidObserver {
             return Response.error("ID người dùng không hợp lệ: " + e.getMessage());
         }
     }
-
-    // --- CÁC HÀM XỬ LÝ ITEM VÀ BID SERVICE ---
 
     private Response processCreateItem(Request req) {
         if (currentUser == null)
@@ -274,8 +272,6 @@ public class ClientHandler implements Runnable, BidObserver {
         }
     }
 
-    // --- CÁC HÀM XỬ LÝ MỚI THÊM ---
-
     private Response processLogout() {
         this.currentUser = null;
         return new Response(true, "Đăng xuất thành công", null);
@@ -301,6 +297,19 @@ public class ClientHandler implements Runnable, BidObserver {
         try {
             Auction auction = (Auction) req.getPayload();
             String itemId = auction.getItem().getId();
+            
+            // Chống tạo nhiều phiên đấu giá cho cùng 1 sản phẩm
+            Response allAuctionsRes = auctionService.getAllAuctions();
+            if (allAuctionsRes.isSuccess()) {
+                @SuppressWarnings("unchecked")
+                java.util.List<Auction> allAuctions = (java.util.List<Auction>) allAuctionsRes.getData();
+                for (Auction a : allAuctions) {
+                    if (a.getItem().getId().equals(itemId) && a.getStatus() != com.auction.shared.model.enums.AuctionStatus.FINISHED) {
+                        return Response.error("Sản phẩm này đã có phiên đấu giá (OPEN/RUNNING).");
+                    }
+                }
+            }
+
             Response getRes = itemService.getItem(itemId);
             if (!getRes.isSuccess()) {
                 return Response.error("Không tìm thấy sản phẩm.");
@@ -340,9 +349,22 @@ public class ClientHandler implements Runnable, BidObserver {
     }
 
     private Response processCloseAuction(Request req) {
+        if (currentUser == null || !"ADMIN".equalsIgnoreCase(currentUser.getRole()))
+            return Response.error("Chỉ Admin mới có quyền thao tác.");
         try {
             String auctionId = (String) req.getPayload();
             return auctionService.closeAuction(auctionId);
+        } catch (Exception e) {
+            return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
+        }
+    }
+
+    private Response processDeleteAuction(Request req) {
+        if (currentUser == null || !"ADMIN".equalsIgnoreCase(currentUser.getRole()))
+            return Response.error("Chỉ Admin mới có quyền thao tác.");
+        try {
+            String auctionId = (String) req.getPayload();
+            return auctionService.deleteAuction(auctionId);
         } catch (Exception e) {
             return Response.error("ID phiên đấu giá không hợp lệ: " + e.getMessage());
         }
@@ -368,13 +390,18 @@ public class ClientHandler implements Runnable, BidObserver {
             String auctionId = (String) data[0];
             String bidderId = (String) data[1];
             double maxAmount = (Double) data[2];
-            return AuctionManager.getInstance().registerAutoBid(auctionId, bidderId, maxAmount);
+            return AuctionManager.getInstance().registerAutoBid(auctionId, currentUser.getId(), maxAmount);
         } catch (Exception e) {
             return Response.error("Dữ liệu cấu hình Auto-bid không hợp lệ: " + e.getMessage());
         }
     }
 
-    // --- IMPLEMENTATION CHO BID OBSERVER ---
+    private Response processCancelAutoBid(Request req) {
+        if (currentUser == null)
+            return Response.error("Vui lòng đăng nhập.");
+        String auctionId = (String) req.getPayload();
+        return AuctionManager.getInstance().cancelAutoBid(auctionId, currentUser.getId());
+    }
 
     @Override
     public void update(Item item, double newPrice, String lastBidderId, java.time.LocalDateTime newEndTime) {

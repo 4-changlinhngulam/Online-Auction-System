@@ -58,7 +58,9 @@ public class AdminController {
 
     private List<Item> pendingItems;
     private List<User> allUsers;
-    private List<Auction> openAuctions;
+    private List<Auction> allAuctionsList; // Đổi tên để phản ánh việc lấy tất cả
+
+    private boolean isProcessingDeleteAuction = false;
 
     @FXML
     public void initialize() {
@@ -121,19 +123,58 @@ public class AdminController {
         });
     }
 
+    @SuppressWarnings("unchecked")
     private void loadAuctionsData() {
         com.auction.shared.protocol.Request req = new com.auction.shared.protocol.Request(
             com.auction.shared.protocol.RequestType.GET_ALL_AUCTIONS, null);
         com.auction.client.network.ServerConnection.getInstance().sendRequestAsync(req, res -> {
             Platform.runLater(() -> {
                 if (res != null && res.isSuccess() && res.getData() instanceof java.util.List) {
-                    openAuctions = new java.util.ArrayList<>();
+                    allAuctionsList = new java.util.ArrayList<>();
                     for (Auction auction : (java.util.List<Auction>) res.getData()) {
-                        if (auction.getStatus() == com.auction.shared.model.enums.AuctionStatus.OPEN) {
-                            openAuctions.add(auction);
-                        }
+                        // Bỏ filter OPEN để lấy cả RUNNING và FINISHED
+                        allAuctionsList.add(auction);
                     }
-                    auctionTable.setItems(javafx.collections.FXCollections.observableArrayList(openAuctions));
+                    auctionTable.setItems(javafx.collections.FXCollections.observableArrayList(allAuctionsList));
+                }
+            });
+        });
+    }
+
+    @FXML
+    private void handleDeleteAuction() {
+        if (isProcessingDeleteAuction) return;
+
+        Auction selected = auctionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            auctionMessageLabel.setStyle("-fx-text-fill: #ff6b6b;");
+            auctionMessageLabel.setText("Vui lòng chọn phiên đấu giá để xóa!");
+            return;
+        }
+
+        if (selected.getStatus() != com.auction.shared.model.enums.AuctionStatus.FINISHED) {
+            auctionMessageLabel.setStyle("-fx-text-fill: #ff6b6b;");
+            auctionMessageLabel.setText("Chỉ có thể xóa phiên đấu giá đã kết thúc (FINISHED)!");
+            return;
+        }
+
+        isProcessingDeleteAuction = true;
+        auctionMessageLabel.setStyle("-fx-text-fill: #ffff00;");
+        auctionMessageLabel.setText("Đang xử lý...");
+
+        com.auction.shared.protocol.Request req = new com.auction.shared.protocol.Request(
+            com.auction.shared.protocol.RequestType.DELETE_AUCTION, selected.getId());
+        
+        com.auction.client.network.ServerConnection.getInstance().sendRequestAsync(req, res -> {
+            Platform.runLater(() -> {
+                isProcessingDeleteAuction = false;
+                if (res != null && res.isSuccess()) {
+                    auctionMessageLabel.setStyle("-fx-text-fill: #00ff00;");
+                    auctionMessageLabel.setText("Đã xóa phiên đấu giá!");
+                    loadAuctionsData();
+                } else {
+                    auctionMessageLabel.setStyle("-fx-text-fill: #ff6b6b;");
+                    auctionMessageLabel.setText("Lỗi: " + (res != null ? res.getMessage() : "Mất kết nối"));
                 }
             });
         });
@@ -214,7 +255,8 @@ public class AdminController {
                 if (res != null && res.isSuccess()) {
                     userMessageLabel.setStyle("-fx-text-fill: #00ff00;");
                     userMessageLabel.setText("Đã khóa tài khoản thành công: " + selected.getUsername());
-                    // Cập nhật giao diện (tuỳ chọn refresh table nếu Server trả về dữ liệu mới)
+                    selected.setStatus(com.auction.shared.model.enums.UserStatus.BANNED);
+                    userTable.refresh();
                 } else {
                     userMessageLabel.setStyle("-fx-text-fill: #ff6b6b;");
                     userMessageLabel.setText("Lỗi khóa: " + (res != null ? res.getMessage() : "Không phản hồi"));

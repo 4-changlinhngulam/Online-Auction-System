@@ -28,6 +28,7 @@ public class ProductManageController {
     @FXML private Label messageLabel;
 
     private List<Item> myProducts = new ArrayList<>();
+    private boolean isProcessing = false;
 
     @FXML
     public void initialize() {
@@ -52,7 +53,6 @@ public class ProductManageController {
     }
 
     private void loadProducts() {
-        // --- REAL MODE ---
         try {
             com.auction.shared.protocol.Request req = new com.auction.shared.protocol.Request(
                 com.auction.shared.protocol.RequestType.GET_MY_ITEMS, null);
@@ -76,6 +76,7 @@ public class ProductManageController {
 
     @FXML
     private void handleAddProduct() {
+        ProductFormController.editingItem = null;
         SceneManager.switchTo(
                 "/com/auction/fxml/product/product-form.fxml"
         );
@@ -89,6 +90,7 @@ public class ProductManageController {
             messageLabel.setText("Vui lòng chọn sản phẩm!");
             return;
         }
+        ProductFormController.editingItem = selected;
         SceneManager.switchTo(
                 "/com/auction/fxml/product/product-form.fxml"
         );
@@ -132,6 +134,8 @@ public class ProductManageController {
 
     @FXML
     private void handleCreateAuction() {
+        if (isProcessing) return;
+
         Item selected = productTable.getSelectionModel()
                 .getSelectedItem();
         if (selected == null) {
@@ -144,14 +148,28 @@ public class ProductManageController {
         newAuction.setItem(selected);
         newAuction.setCurrentPrice(selected.getStartingPrice());
         newAuction.setStatus(com.auction.shared.model.enums.AuctionStatus.OPEN);
-        // Mặc định phiên đấu giá kéo dài 3 ngày
-        newAuction.setStartTime(LocalDateTime.now());
-        newAuction.setEndTime(LocalDateTime.now().plusDays(3));
+        // Lấy thời gian ưu tiên từ sản phẩm
+        if (selected.getPreferredStartTime() != null) {
+            newAuction.setStartTime(selected.getPreferredStartTime());
+        } else {
+            newAuction.setStartTime(LocalDateTime.now());
+        }
+
+        if (selected.getPreferredEndTime() != null) {
+            newAuction.setEndTime(selected.getPreferredEndTime());
+        } else {
+            newAuction.setEndTime(LocalDateTime.now().plusDays(3));
+        }
+
+        isProcessing = true;
+        messageLabel.setStyle("-fx-text-fill: #ffff00;");
+        messageLabel.setText("Đang xử lý...");
 
         ServerConnection.getInstance().sendRequestAsync(
             new Request(RequestType.CREATE_AUCTION, newAuction),
             response -> {
                 Platform.runLater(() -> {
+                    isProcessing = false;
                     if (response.isSuccess()) {
                         messageLabel.setStyle("-fx-text-fill: #00ff00;");
                         messageLabel.setText("Tạo phiên đấu giá thành công!");

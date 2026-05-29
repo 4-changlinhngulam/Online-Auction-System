@@ -24,8 +24,6 @@ public class UserDAO {
 
     private static final Logger LOGGER = Logger.getLogger(UserDAO.class.getName());
 
-    // 1. THÊM MỚI USER (SAVE)
-
     public void save(User user) throws DataPersistenceException {
         if (user == null || user.getId() == null) {
             throw new IllegalArgumentException("User và ID không được phép null");
@@ -62,8 +60,6 @@ public class UserDAO {
         }
     }
 
-    // 2. CẬP NHẬT USER (UPDATE)
-
     public void update(User user) throws DataPersistenceException, EntityNotFoundException {
         if (user == null || user.getId() == null) {
             throw new IllegalArgumentException("User và ID không được phép null");
@@ -98,8 +94,6 @@ public class UserDAO {
         }
     }
 
-    // 3. TÌM THEO ID (FIND BY ID)
-
     public User findById(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "SELECT * FROM users WHERE id = ?";
 
@@ -120,8 +114,6 @@ public class UserDAO {
         }
     }
 
-    // 4. LẤY TOÀN BỘ USER (FIND ALL)
-
     public List<User> findAll() throws DataPersistenceException {
         List<User> users = new ArrayList<>();
         String sql = "SELECT * FROM users";
@@ -139,8 +131,6 @@ public class UserDAO {
         return users;
     }
 
-    // 5. XÓA USER BẰNG ID (DELETE by ID)
-
     public void deleteByID(String id) throws DataPersistenceException, EntityNotFoundException {
         String sql = "DELETE FROM users WHERE id = ?";
 
@@ -156,8 +146,6 @@ public class UserDAO {
             throw new DataPersistenceException("Lỗi khi xóa User", e);
         }
     }
-
-    // 6. TÌM USER THEO TÊN (FIND by USERNAME)
     public User findByUsername(String username) throws DataPersistenceException {
         String sql = "SELECT * FROM users WHERE username = ?";
 
@@ -177,8 +165,6 @@ public class UserDAO {
             throw new DataPersistenceException("Lỗi khi tìm User theo Username", e);
         }
     }
-
-    // --- HÀM HỖ TRỢ: CHUYỂN ĐỔI DỮ LIỆU TỪ DB SANG JAVA OBJECT ---
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         String role = rs.getString("role");
         User user;

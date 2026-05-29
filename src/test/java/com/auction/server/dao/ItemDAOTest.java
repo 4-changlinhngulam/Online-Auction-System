@@ -114,7 +114,7 @@ class ItemDAOTest {
         verify(mockPreparedStatement).setDouble(3, 50000.0);
         verify(mockPreparedStatement).setString(4, "VEHICLE");
         verify(mockPreparedStatement).setLong(6, 10000L);
-        verify(mockPreparedStatement).setString(7, "ITEM_02");
+        verify(mockPreparedStatement).setString(12, "ITEM_02");
     }
 
     @Test

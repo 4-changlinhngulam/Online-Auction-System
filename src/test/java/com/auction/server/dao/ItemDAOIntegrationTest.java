@@ -31,7 +31,12 @@ class ItemDAOIntegrationTest {
                 "starting_price DOUBLE, " +
                 "item_type VARCHAR(20), " +
                 "warranty_months INT, " +
-                "mileage BIGINT)");
+                "mileage BIGINT, " +
+                "owner_id VARCHAR(50), " +
+                "status VARCHAR(20), " +
+                "image_bytes BLOB, " +
+                "preferred_start_time TIMESTAMP, " +
+                "preferred_end_time TIMESTAMP)");
         stmt.execute("TRUNCATE TABLE items");
     }
 

@@ -47,7 +47,12 @@ class AuctionManagerTest {
                     "starting_price DOUBLE, " +
                     "item_type VARCHAR(20), " +
                     "warranty_months INT, " +
-                    "mileage BIGINT)");
+                    "mileage BIGINT, " +
+                    "owner_id VARCHAR(50), " +
+                    "status VARCHAR(20), " +
+                    "image_bytes BLOB, " +
+                    "preferred_start_time TIMESTAMP, " +
+                    "preferred_end_time TIMESTAMP)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS auctions (" +
                     "id VARCHAR(50) PRIMARY KEY, " +
@@ -210,5 +215,157 @@ class AuctionManagerTest {
 
         // Dọn dẹp và hủy đăng ký observer
         auctionManager.removeObserver(observer);
+    }
+
+    @Test
+    @DisplayName("Test Auto-bid trigger thành công khi có người đặt giá mới")
+    void testAutoBidTrigger_Success() throws Exception {
+        // 1. Tạo và lưu 2 bidder
+        Bidder bidderA = new Bidder("bidderA", "pass", "a@gmail.com");
+        bidderA.setId("USER_AM_AUTO_01");
+        userDAO.save(bidderA);
+
+        Bidder bidderB = new Bidder("bidderB", "pass", "b@gmail.com");
+        bidderB.setId("USER_AM_AUTO_02");
+        userDAO.save(bidderB);
+
+        // 2. Tạo sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_AUTO_01");
+        item.setName("SmartTV");
+        item.setStartingPrice(500000.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_AUTO_01");
+        auction.setItem(item);
+        auction.setCurrentPrice(500000.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 1500000
+        Response regResponse = auctionManager.registerAutoBid("AUC_AM_AUTO_01", "USER_AM_AUTO_01", 1500000.0);
+        assertTrue(regResponse.isSuccess());
+
+        // 4. Bidder B đặt giá thủ công 600000
+        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_01", "USER_AM_AUTO_02", 600000.0);
+        assertTrue(bidResponse.isSuccess());
+
+        // 5. Chờ luồng Auto-bid xử lý bất đồng bộ
+        boolean autoBidExecuted = false;
+        for (int i = 0; i < 20; i++) {
+            Thread.sleep(50);
+            Auction updated = auctionDAO.findById("AUC_AM_AUTO_01");
+            if (updated.getCurrentPrice() == 650000.0 && "USER_AM_AUTO_01".equals(updated.getCurrentWinner().getId())) {
+                autoBidExecuted = true;
+                break;
+            }
+        }
+
+        assertTrue(autoBidExecuted, "Auto-bid phải tự động được kích hoạt và nâng giá lên 650,000 VND");
+    }
+
+    @Test
+    @DisplayName("Test Auto-bid không kích hoạt khi giá vượt mức giới hạn (limit)")
+    void testAutoBidTrigger_LimitReached() throws Exception {
+        // 1. Tạo và lưu 2 bidder
+        Bidder bidderA = new Bidder("bidderA2", "pass", "a2@gmail.com");
+        bidderA.setId("USER_AM_AUTO_03");
+        userDAO.save(bidderA);
+
+        Bidder bidderB = new Bidder("bidderB2", "pass", "b2@gmail.com");
+        bidderB.setId("USER_AM_AUTO_04");
+        userDAO.save(bidderB);
+
+        // 2. Tạo sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_AUTO_02");
+        item.setName("Tablet");
+        item.setStartingPrice(500000.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_AUTO_02");
+        auction.setItem(item);
+        auction.setCurrentPrice(500000.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // 3. Đăng ký Auto-bid cho Bidder A với maxAmount = 620000 (nhỏ hơn mức giá tiếp theo là 650000)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_02", "USER_AM_AUTO_03", 620000.0);
+
+        // 4. Bidder B đặt giá thủ công 600000
+        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_02", "USER_AM_AUTO_04", 600000.0);
+        assertTrue(bidResponse.isSuccess());
+
+        // 5. Chờ một lát xem Auto-bid có kích hoạt không (không được kích hoạt)
+        Thread.sleep(300);
+        Auction updated = auctionDAO.findById("AUC_AM_AUTO_02");
+        assertEquals(600000.0, updated.getCurrentPrice());
+        assertEquals("USER_AM_AUTO_04", updated.getCurrentWinner().getId());
+    }
+
+    @Test
+    @DisplayName("Test Auto-bid ping-pong giữa 2 người cài cấu hình Auto-bid")
+    void testAutoBidTrigger_PingPong() throws Exception {
+        // 1. Tạo và lưu 3 bidder
+        Bidder bidderA = new Bidder("bidderA3", "pass", "a3@gmail.com");
+        bidderA.setId("USER_AM_AUTO_05");
+        userDAO.save(bidderA);
+
+        Bidder bidderB = new Bidder("bidderB3", "pass", "b3@gmail.com");
+        bidderB.setId("USER_AM_AUTO_06");
+        userDAO.save(bidderB);
+
+        Bidder bidderC = new Bidder("bidderC3", "pass", "c3@gmail.com");
+        bidderC.setId("USER_AM_AUTO_07");
+        userDAO.save(bidderC);
+
+        // 2. Tạo sản phẩm và phiên đấu giá
+        Electronics item = new Electronics();
+        item.setId("ITEM_AM_AUTO_03");
+        item.setName("Console");
+        item.setStartingPrice(500000.0);
+        itemDAO.save(item);
+
+        Auction auction = new Auction();
+        auction.setId("AUC_AM_AUTO_03");
+        auction.setItem(item);
+        auction.setCurrentPrice(500000.0);
+        auction.setStatus(AuctionStatus.RUNNING);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auctionDAO.save(auction);
+
+        auctionManager.addAuction(auction);
+
+        // 3. Đăng ký Auto-bid cho Bidder A (max 800k) và Bidder B (max 900k)
+        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_05", 800000.0);
+        auctionManager.registerAutoBid("AUC_AM_AUTO_03", "USER_AM_AUTO_06", 900000.0);
+
+        // 4. Bidder C đặt giá thủ công 550000 để kích hoạt ping-pong
+        Response bidResponse = auctionManager.processNewBid("AUC_AM_AUTO_03", "USER_AM_AUTO_07", 550000.0);
+        assertTrue(bidResponse.isSuccess());
+
+        // 5. Chờ chuỗi ping-pong tự nâng giá hoàn thành
+        boolean pingPongDone = false;
+        for (int i = 0; i < 40; i++) {
+            Thread.sleep(100);
+            Auction updated = auctionDAO.findById("AUC_AM_AUTO_03");
+            if (updated.getCurrentPrice() == 800000.0 && "USER_AM_AUTO_06".equals(updated.getCurrentWinner().getId())) {
+                pingPongDone = true;
+                break;
+            }
+        }
+
+        assertTrue(pingPongDone, "Chuỗi ping-pong Auto-bid phải dừng ở 800,000 VND và người thắng là Bidder B");
     }
 }

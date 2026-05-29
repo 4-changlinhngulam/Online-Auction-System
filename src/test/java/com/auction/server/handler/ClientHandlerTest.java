@@ -101,4 +101,68 @@ class ClientHandlerTest {
             assertEquals("Đăng nhập thành công.", res.getMessage());
         }
     }
+
+    @Test
+    @DisplayName("Test ClientHandler: Đăng ký tài khoản mới qua socket")
+    void testClientHandler_Register() throws Exception {
+        try (Socket clientSocket = new Socket("localhost", port);
+             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+
+            out.flush();
+
+            Bidder bidder = new Bidder("reg_socket_user", "password123", "reg_socket@gmail.com");
+            bidder.setId("USR_SOCKET_REG");
+            bidder.setRole(com.auction.shared.model.enums.UserRole.BIDDER);
+
+            Request req = new Request(RequestType.REGISTER, bidder);
+            out.writeObject(req);
+            out.flush();
+
+            Response res = (Response) in.readObject();
+            assertNotNull(res);
+            assertTrue(res.isSuccess());
+            assertEquals("Đăng ký tài khoản thành công.", res.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Test ClientHandler: Đặt giá khi chưa đăng nhập (Trả về lỗi)")
+    void testClientHandler_PlaceBid_Unauthenticated() throws Exception {
+        try (Socket clientSocket = new Socket("localhost", port);
+             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+
+            out.flush();
+
+            Request req = new Request(RequestType.PLACE_BID, new Object[]{"AUC_ID", "BIDDER_ID", 100.0});
+            out.writeObject(req);
+            out.flush();
+
+            Response res = (Response) in.readObject();
+            assertNotNull(res);
+            assertFalse(res.isSuccess());
+            assertEquals("Vui lòng đăng nhập.", res.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Test ClientHandler: Request không hợp lệ")
+    void testClientHandler_InvalidRequest() throws Exception {
+        try (Socket clientSocket = new Socket("localhost", port);
+             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+
+            out.flush();
+
+            Request req = new Request(null, null);
+            out.writeObject(req);
+            out.flush();
+
+            Response res = (Response) in.readObject();
+            assertNotNull(res);
+            assertFalse(res.isSuccess());
+            assertEquals("Request không hợp lệ", res.getMessage());
+        }
+    }
 }

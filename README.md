@@ -1,10 +1,10 @@
-# 🏷️ Online Auction System – LTNC 2026
+# Online Auction System – LTNC 2026
 
 Hệ thống đấu giá trực tuyến được xây dựng theo kiến trúc **Client–Server**, sử dụng **Java**, **JavaFX** làm giao diện người dùng, cấu trúc thiết kế **MVC**, kết nối truyền thông qua **Java Sockets** (TCP/IP), và cơ sở dữ liệu **MySQL**.
 
 ---
 
-## 📖 1. Mô tả bài toán & Phạm vi hệ thống
+## 1. Mô tả bài toán & Phạm vi hệ thống
 
 ### Mô tả bài toán
 Dự án giải quyết bài toán quản lý và thực hiện đấu giá trực tuyến thời gian thực. Hệ thống cho phép người dùng đăng bán sản phẩm, tham gia đấu giá các sản phẩm đang mở, đặt cấu hình tự động đấu giá (Auto-bidding) khi không online, và theo dõi biến động giá cả trực tiếp mà không cần tải lại trang. Đồng thời, hệ thống cung cấp quyền quản trị (Admin) để kiểm soát danh sách người dùng và hoạt động đấu giá nhằm đảm bảo tính minh bạch, lành mạnh.
@@ -17,7 +17,7 @@ Dự án giải quyết bài toán quản lý và thực hiện đấu giá tr�
 
 ---
 
-## 🛠️ 2. Công nghệ sử dụng & Yêu cầu cài đặt
+## 2. Công nghệ sử dụng & Yêu cầu cài đặt
 
 ### Công nghệ sử dụng
 - **Ngôn ngữ**: Java 17+
@@ -36,7 +36,7 @@ Dự án giải quyết bài toán quản lý và thực hiện đấu giá tr�
 
 ---
 
-## 📁 3. Cấu trúc thư mục dự án
+## 3. Cấu trúc thư mục dự án
 
 ```
 Online-Auction-System
@@ -65,7 +65,7 @@ Online-Auction-System
 
 ---
 
-## 🚀 4. Hướng dẫn chạy chương trình (Thứ tự cụ thể)
+## 4. Hướng dẫn chạy chương trình (Thứ tự cụ thể)
 
 Để chương trình hoạt động chính xác, vui lòng thực hiện đúng theo các bước và thứ tự dưới đây:
 
@@ -96,7 +96,7 @@ mvn exec:java -Dexec.mainClass=com.auction.client.AuctionClientApp
 
 ---
 
-## 🧪 5. Kiểm thử & Đảm bảo mã nguồn (Testing)
+## 5. Kiểm thử & Đảm bảo mã nguồn (Testing)
 
 Dự án tích hợp các công cụ kiểm thử tự động và kiểm tra định dạng mã nguồn để đảm bảo chất lượng.
 
@@ -112,7 +112,7 @@ mvn checkstyle:check
 
 ---
 
-## ✅ 6. Danh sách chức năng đã hoàn thành
+## 6. Danh sách chức năng đã hoàn thành
 
 Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi sau:
 
@@ -141,7 +141,7 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 
 ---
 
-## 👥 7. Phân công nhóm & Mẫu thiết kế sử dụng
+## 7. Phân công nhóm & Mẫu thiết kế sử dụng
 
 ### Phân công thành viên
 | Thành viên | Nhiệm vụ chính |
@@ -157,4 +157,6 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 - **Observer Pattern**: Triển khai thông qua kết nối Socket để cập nhật thời gian thực sự thay đổi giá thầu phiên đấu giá từ Server đến toàn bộ Client đang theo dõi.
 
 ---
-
+## 8. Link báo cáo & video demo
+- Link báo cáo đồ án: [Chưa cập nhật]()
+- Link video demo: [Chưa cập nhật]()

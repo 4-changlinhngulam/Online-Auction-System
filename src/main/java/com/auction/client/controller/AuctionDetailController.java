@@ -108,31 +108,9 @@ public class AuctionDetailController {
             displayAuction(currentAuction);
             loadBidHistory();
 
-            // ================= THÊM MỚI TỪ ĐÂY =================
-
-            // 1. Gửi request báo cho Server biết: "Client này đang xem phiên đấu giá, hãy
-            // gửi thông báo cho tôi"
+            // Gửi request báo cho Server biết để nhậ n thông báo
             Request subscribeReq = new Request(RequestType.SUBSCRIBE_AUCTION, currentAuction.getId());
             ServerConnection.getInstance().sendRequestAsync(subscribeReq, null);
-
-            // 2. Đăng ký nhận Broadcast (Push Notification) từ Server
-            ServerConnection.getInstance().setPushNotificationListener(response -> {
-                // Kiểm tra xem có đúng là thông báo có người đặt giá mới không
-                if ("NOTIFICATION_NEW_BID".equals(response.getMessage()) && response.getData() != null) {
-
-                    // Parse dữ liệu gửi về từ ClientHandler.java
-                    Object[] data = (Object[]) response.getData();
-                    Item item = (Item) data[0];
-                    double newPrice = (Double) data[1];
-                    String lastBidderId = (String) data[2];
-                    java.time.LocalDateTime newEndTime = (java.time.LocalDateTime) data[3];
-
-                    // Gọi hàm cập nhật giao diện (đã được bọc sẵn trong Platform.runLater)
-                    onBidUpdate(item, newPrice, lastBidderId, newEndTime);
-                }
-            });
-
-            // ====================================================
         }
     }
 
@@ -407,10 +385,6 @@ public class AuctionDetailController {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
-
-        // --- THÊM DÒNG NÀY ---
-        // Gỡ bỏ Listener để Client ngưng nhận thông báo đẩy cho màn hình này
-        ServerConnection.getInstance().setPushNotificationListener(null);
 
         SceneManager.switchTo("/com/auction/fxml/auction/auction-list.fxml");
     }

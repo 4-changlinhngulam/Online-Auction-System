@@ -157,5 +157,5 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 
 ---
 ## 8. Link báo cáo & video demo
-- Link báo cáo: [Bao_cao_Online_Auction_System.pdf](Bao_cao_Online_Auction_System.pdf)
+- Link báo cáo: [Bao_Cao_Bai_Tap_Lon_OOP_Auction_System.pdf](https://drive.google.com/file/d/1ClKH3G5__VLyf6K4NPxGqRk-N15X1x11/view?usp=sharing)
 - Link video demo: [Chưa cập nhật]()

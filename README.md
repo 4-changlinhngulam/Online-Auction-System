@@ -146,10 +146,9 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 ### Phân công thành viên
 | Thành viên | Nhiệm vụ chính |
 |------------|----------------|
-| ...        | Thiết kế kiến trúc Socket Client-Server & Network Protocol |
-| ...        | Xây dựng cơ sở dữ liệu MySQL, các lớp DAO & Services |
-| ...        | Thiết kế giao diện đồ họa JavaFX (FXML) & các Controllers |
-| ...        | Viết Unit/Integration Tests & Cấu hình kiểm tra Checkstyle |
+| Nguyễn Việt Ngọc Duy | Thiết kế & phát triển kiến trúc Socket Client-Server, các lớp DAO & Services cốt lõi, cơ chế đồng bộ thời gian thực (Observer), Auto-bidding, Anti-sniping và giao diện Admin |
+| Đặng Quốc Khánh | Thiết kế CSDL MySQL, cấu trúc MVC ban đầu, giao diện & logic Đăng nhập/Đăng ký, biểu mẫu thêm sản phẩm và chi tiết đấu giá |
+| Đặng Tiến Đạt | Thiết lập in-memory H2 database test, viết 94 Unit & Integration Tests, kiểm thử Concurrency, cấu hình Checkstyle & CI/CD GitHub Actions |
 
 ### Design Patterns áp dụng
 - **Singleton Pattern**: Áp dụng tại `AuctionManager` (phía Server), `ServerConnection` (phía Client), `SessionManager` để quản lý tập trung và duy nhất các luồng dữ liệu chính.
@@ -158,5 +157,5 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 
 ---
 ## 8. Link báo cáo & video demo
-- Link báo cáo đồ án: [Chưa cập nhật]()
+- Link báo cáo: [Bao_cao_Online_Auction_System.pdf](Bao_cao_Online_Auction_System.pdf)
 - Link video demo: [Chưa cập nhật]()

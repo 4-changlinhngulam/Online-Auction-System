@@ -146,7 +146,7 @@ Hệ thống đã triển khai đầy đủ các nhóm chức năng cốt lõi s
 ### Phân công thành viên
 | Thành viên | Nhiệm vụ chính |
 |------------|----------------|
-| Nguyễn Việt Ngọc Duy | Thiết kế & phát triển kiến trúc Socket Client-Server, các lớp DAO & Services cốt lõi, cơ chế đồng bộ thời gian thực (Observer), Auto-bidding, Anti-sniping và giao diện Admin |
+| Nguyễn Viết Ngọc Duy | Thiết kế & phát triển kiến trúc Socket Client-Server, các lớp DAO & Services cốt lõi, cơ chế đồng bộ thời gian thực (Observer), Auto-bidding, Anti-sniping và giao diện Admin |
 | Đặng Quốc Khánh | Thiết kế CSDL MySQL, cấu trúc MVC ban đầu, giao diện & logic Đăng nhập/Đăng ký, biểu mẫu thêm sản phẩm và chi tiết đấu giá |
 | Đặng Tiến Đạt | Thiết lập in-memory H2 database test, viết 94 Unit & Integration Tests, kiểm thử Concurrency, cấu hình Checkstyle & CI/CD GitHub Actions |
 

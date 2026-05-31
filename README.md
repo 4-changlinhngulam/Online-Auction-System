@@ -78,9 +78,9 @@ Server cần phải chạy trước để mở Socket lắng nghe kết nối t�
 
 Mở terminal tại thư mục gốc của dự án và chạy lệnh sau (chạy được trên **Windows, Linux, macOS**):
 ```bash
-mvn clean compile exec:java -Dexec.mainClass=com.auction.server.AuctionServer
+mvn clean compile exec:java "-Dexec.mainClass=com.auction.server.AuctionServer"
 ```
-*Lưu ý cho các hệ điều hành*: Lệnh trên sử dụng thuộc tính không chứa dấu ngoặc kép hoặc ký tự đặc biệt để đảm bảo tương thích hoàn toàn trên tất cả các trình thông dịch lệnh (CMD, PowerShell trên Windows, Bash/Zsh trên Linux/macOS).
+*Lưu ý*: Đối với Windows PowerShell, bạn bắt buộc phải để tham số `-D` trong dấu ngoặc kép `""` như lệnh bên trên (hoặc dùng `cmd` thay thế) để tránh lỗi "Unknown lifecycle phase". Lệnh này tương thích cho cả CMD và Terminal trên macOS/Linux.
 
 ### Bước 3: Khởi động Client
 Sau khi Server thông báo khởi động thành công và đang lắng nghe (thường là cổng `8080` hoặc cổng được cấu hình), bạn có thể chạy một hoặc nhiều ứng dụng Client.

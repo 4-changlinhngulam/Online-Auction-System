@@ -91,7 +91,7 @@ mvn javafx:run
 ```
 *(Hoặc dùng lệnh đầy đủ tương tự Server):*
 ```bash
-mvn exec:java -Dexec.mainClass=com.auction.client.AuctionClientApp
+mvn exec:java "-Dexec.mainClass=com.auction.client.AuctionClientApp"
 ```
 
 ---

@@ -29,10 +29,8 @@ class AuctionTest {
 
     @Test
     void handleNewBid_withValidBid_shouldUpdatePriceAndWinner() {
-        // When
         boolean result = auction.handleNewBid(bidder1, 120.0);
 
-        // Then
         assertTrue(result);
         assertEquals(120.0, auction.getCurrentPrice());
         assertEquals(bidder1, auction.getCurrentWinner());
@@ -42,10 +40,8 @@ class AuctionTest {
 
     @Test
     void handleNewBid_withLowerBid_shouldNotUpdate() {
-        // When
         boolean result = auction.handleNewBid(bidder1, 90.0);
 
-        // Then
         assertFalse(result);
         assertEquals(100.0, auction.getCurrentPrice());
         assertNull(auction.getCurrentWinner());
@@ -54,13 +50,10 @@ class AuctionTest {
 
     @Test
     void handleNewBid_whenAuctionNotRunning_shouldNotUpdate() {
-        // Given
         auction.setStatus(AuctionStatus.FINISHED);
 
-        // When
         boolean result = auction.handleNewBid(bidder1, 120.0);
 
-        // Then
         assertFalse(result);
         assertEquals(100.0, auction.getCurrentPrice());
     }
